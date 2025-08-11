@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { hasLocalStorageData } from '../utils/storage';
+import { migrateLocalStorageToD1, hasLocalStorageData } from '../utils/storage';
 import { databaseService } from '../services/database';
 
 interface DataMigrationProps {
@@ -27,19 +27,9 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
         throw new Error(`Diagnostics failed: ${JSON.stringify(diagnostics)}`);
       }
       
-      // Run step-by-step migration test instead of full migration
-      console.log('Running step-by-step migration test...');
-      const localAppData = JSON.parse(localStorage.getItem('modular-learning-rpg') || '{}');
-      const localTemplates = JSON.parse(localStorage.getItem('user-templates') || '[]');
-      
-      const stepResult = await databaseService.stepByStepMigration({
-        appData: localAppData,
-        userTemplates: localTemplates
-      });
-      
-      if (!stepResult.success) {
-        throw new Error(`Migration failed at: ${stepResult.failed_at} - ${stepResult.error}`);
-      }
+      // Proceed with actual migration
+      console.log('Running full migration...');
+      await migrateLocalStorageToD1();
       setSuccess(true);
       setTimeout(() => {
         onMigrationComplete();

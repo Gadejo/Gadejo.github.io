@@ -10,6 +10,7 @@ import { TemplateManager } from './components/TemplateManager';
 import AuthScreen from './components/AuthScreen';
 import DataMigration from './components/DataMigration';
 import { authService } from './services/auth';
+import { hasLocalStorageData } from './utils/storage';
 import type { SubjectConfig, Template, AppData } from './types';
 import './styles/index.css';
 
@@ -41,14 +42,16 @@ function App() {
     const user = authService.getCurrentUser();
     if (user) {
       setIsAuthenticated(true);
-      setShowMigration(true); // Check for migration after authentication
+      // Only show migration if there's actually localStorage data to migrate
+      setShowMigration(hasLocalStorageData());
     }
     setIsLoading(false);
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = (shouldShowMigration: boolean) => {
     setIsAuthenticated(true);
-    setShowMigration(true);
+    // Use the parameter from AuthScreen, but also check localStorage as backup
+    setShowMigration(shouldShowMigration || hasLocalStorageData());
   };
 
   const handleLogout = () => {
