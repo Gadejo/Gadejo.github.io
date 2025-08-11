@@ -2,14 +2,31 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
-  avatar?: string;
-  createdAt: string;
-  lastSyncAt: string;
-  preferences: {
-    theme: 'light' | 'dark';
-    syncEnabled: boolean;
-    offlineMode: boolean;
+  avatarUrl?: string;
+  createdAt?: string;
+  lastLogin?: string;
+  totalStudyTime: number;
+  totalSessions: number;
+  currentStreak: number;
+  longestStreak: number;
+  level: number;
+  totalXp: number;
+  preferences?: {
+    dark: boolean;
+    notifications: boolean;
+    privacy: 'private' | 'public' | 'friends';
   };
+}
+
+export interface PublicUser {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+  lastLogin?: string;
+  totalStudyTime: number;
+  totalSessions: number;
+  currentStreak: number;
 }
 
 export interface AuthState {
@@ -17,6 +34,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  availableUsers: PublicUser[];
+  token: string | null;
 }
 
 export interface LoginCredentials {
@@ -31,8 +50,10 @@ export interface RegisterData {
 }
 
 export interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
+  switchUser: (credentials: LoginCredentials) => Promise<void>;
+  refreshUsers: () => Promise<void>;
+  verifyAuth: () => Promise<boolean>;
 }

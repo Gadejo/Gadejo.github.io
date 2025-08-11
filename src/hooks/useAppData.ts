@@ -1,31 +1,69 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppData, SubjectData, Session, Goal, SubjectConfig } from '../types';
 import { loadAppData, saveAppData } from '../utils/storage';
+import { databaseService } from '../services/database';
+import { authService } from '../services/auth';
 
 export function useAppData() {
-  const [data, setData] = useState<AppData>(() => loadAppData());
+  const [data, setData] = useState<AppData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const saveData = useCallback((newData: AppData) => {
+  // Initial data loading
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const appData = await loadAppData();
+        setData(appData);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  const saveData = useCallback(async (newData: AppData) => {
     setData(newData);
-    saveAppData(newData);
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
   }, []);
 
-  const updateSubject = useCallback((subjectId: string, updates: Partial<SubjectData>) => {
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        subjects: {
-          ...prevData.subjects,
-          [subjectId]: {
-            ...prevData.subjects[subjectId],
-            ...updates
-          }
+  const updateSubject = useCallback(async (subjectId: string, updates: Partial<SubjectData>) => {
+    if (!data) return;
+    
+    const newData = {
+      ...data,
+      subjects: {
+        ...data.subjects,
+        [subjectId]: {
+          ...data.subjects[subjectId],
+          ...updates
         }
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+      }
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to update directly in database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.updateSubject(subjectId, updates);
+      } catch (error) {
+        console.error('Failed to update subject in database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
   const addSubject = useCallback((config: SubjectConfig) => {
     const subjectData: SubjectData = {
@@ -65,71 +103,93 @@ export function useAppData() {
     });
   }, []);
 
-  const addSession = useCallback((session: Omit<Session, 'id'>) => {
+  const addSession = useCallback(async (session: Omit<Session, 'id'>) => {
+    if (!data) return null;
+    
     const newSession: Session = {
       ...session,
       id: `session-${Date.now()}-${Math.random().toString(36).slice(2)}`
     };
 
-    setData(prevData => {
-      const subject = prevData.subjects[session.subjectId];
-      if (!subject) return prevData;
+    const subject = data.subjects[session.subjectId];
+    if (!subject) return null;
 
-      // Update subject data based on session
-      const today = new Date().toISOString().slice(0, 10);
-      const lastStudyDate = subject.lastStudyDate;
-      
-      let newStreak = subject.currentStreak;
-      if (!lastStudyDate) {
-        newStreak = 1;
+    // Update subject data based on session
+    const today = new Date().toISOString().slice(0, 10);
+    const lastStudyDate = subject.lastStudyDate;
+    
+    let newStreak = subject.currentStreak;
+    if (!lastStudyDate) {
+      newStreak = 1;
+    } else {
+      const daysDiff = Math.floor((new Date(today).getTime() - new Date(lastStudyDate).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff === 0) {
+        // Same day, no change to streak
+      } else if (daysDiff === 1) {
+        newStreak += 1;
       } else {
-        const daysDiff = Math.floor((new Date(today).getTime() - new Date(lastStudyDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff === 0) {
-          // Same day, no change to streak
-        } else if (daysDiff === 1) {
-          newStreak += 1;
-        } else {
-          newStreak = 1; // Reset streak
-        }
+        newStreak = 1; // Reset streak
       }
+    }
 
-      // Update achievement level
-      const questType = subject.config.questTypes.find(q => q.id === session.questType);
-      const xpGained = questType?.xp || 0;
-      
-      let achievementLevel = subject.achievementLevel;
-      for (let i = subject.config.achievements.length - 1; i >= 0; i--) {
-        if (newStreak >= subject.config.achievements[i].streakRequired) {
-          achievementLevel = i;
-          break;
-        }
+    // Update achievement level
+    const questType = subject.config.questTypes.find(q => q.id === session.questType);
+    const xpGained = questType?.xp || 0;
+    
+    let achievementLevel = subject.achievementLevel;
+    for (let i = subject.config.achievements.length - 1; i >= 0; i--) {
+      if (newStreak >= subject.config.achievements[i].streakRequired) {
+        achievementLevel = i;
+        break;
       }
+    }
 
-      const updatedSubject: SubjectData = {
-        ...subject,
-        totalMinutes: subject.totalMinutes + session.duration,
-        currentStreak: newStreak,
-        longestStreak: Math.max(subject.longestStreak, newStreak),
-        lastStudyDate: today,
-        totalXP: subject.totalXP + xpGained,
-        achievementLevel
-      };
+    const updatedSubject: SubjectData = {
+      ...subject,
+      totalMinutes: subject.totalMinutes + session.duration,
+      currentStreak: newStreak,
+      longestStreak: Math.max(subject.longestStreak, newStreak),
+      lastStudyDate: today,
+      totalXP: subject.totalXP + xpGained,
+      achievementLevel
+    };
 
-      const newData = {
-        ...prevData,
-        sessions: [...prevData.sessions, newSession],
-        subjects: {
-          ...prevData.subjects,
-          [session.subjectId]: updatedSubject
-        }
-      };
-      
-      saveAppData(newData);
-      return newData;
-    });
-
+    const newData = {
+      ...data,
+      sessions: [...data.sessions, newSession],
+      subjects: {
+        ...data.subjects,
+        [session.subjectId]: updatedSubject
+      }
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to add session to database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.addSession(session);
+        await databaseService.updateSubject(session.subjectId, {
+          totalMinutes: updatedSubject.totalMinutes,
+          currentStreak: updatedSubject.currentStreak,
+          longestStreak: updatedSubject.longestStreak,
+          lastStudyDate: updatedSubject.lastStudyDate,
+          totalXP: updatedSubject.totalXP,
+          achievementLevel: updatedSubject.achievementLevel
+        });
+      } catch (error) {
+        console.error('Failed to save session to database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+    
     return newSession;
-  }, []);
+  }, [data]);
 
   const addGoal = useCallback((goal: Omit<Goal, 'id'>) => {
     const newGoal: Goal = {

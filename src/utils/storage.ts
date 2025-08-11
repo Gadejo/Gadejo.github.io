@@ -1,5 +1,7 @@
 import type { AppData, SubjectData, SubjectConfig, Template } from '../types';
 import { defaultSubjects } from './defaults';
+import { databaseService } from '../services/database';
+import { authService } from '../services/auth';
 
 const STORAGE_KEY = 'modular-learning-rpg';
 const TEMPLATES_KEY = 'user-templates';
@@ -33,7 +35,23 @@ function createDefaultAppData(): AppData {
   };
 }
 
-export function loadAppData(): AppData {
+export async function loadAppData(): Promise<AppData> {
+  // If user is authenticated, try to load from D1 database
+  if (authService.getCurrentUser()) {
+    try {
+      return await databaseService.loadAppData();
+    } catch (error) {
+      console.error('Failed to load from database, falling back to localStorage:', error);
+      // Fall back to localStorage
+      return loadAppDataFromLocalStorage();
+    }
+  }
+  
+  // Fallback to localStorage for offline use
+  return loadAppDataFromLocalStorage();
+}
+
+function loadAppDataFromLocalStorage(): AppData {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return createDefaultAppData();
@@ -59,12 +77,57 @@ export function loadAppData(): AppData {
   }
 }
 
-export function saveAppData(data: AppData): void {
+export async function saveAppData(data: AppData): Promise<void> {
+  // If user is authenticated, save to D1 database
+  if (authService.getCurrentUser()) {
+    try {
+      await databaseService.saveAppData(data);
+      // Also save to localStorage as backup
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return;
+    } catch (error) {
+      console.error('Failed to save to database, saving to localStorage:', error);
+      // Fall back to localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return;
+    }
+  }
+  
+  // Fallback to localStorage for offline use
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Failed to save app data:', error);
   }
+}
+
+// Migration function to move localStorage data to D1
+export async function migrateLocalStorageToD1(): Promise<void> {
+  if (!authService.getCurrentUser()) {
+    throw new Error('User must be authenticated to migrate data');
+  }
+
+  const localAppData = loadAppDataFromLocalStorage();
+  const localTemplates = loadUserTemplatesFromLocalStorage();
+  
+  try {
+    await databaseService.migrateFromLocalStorage({
+      appData: localAppData,
+      userTemplates: localTemplates
+    });
+    
+    console.log('Successfully migrated data to D1 database');
+  } catch (error) {
+    console.error('Migration failed:', error);
+    throw error;
+  }
+}
+
+// Check if there's localStorage data that needs migration
+export function hasLocalStorageData(): boolean {
+  const appData = localStorage.getItem(STORAGE_KEY);
+  const templates = localStorage.getItem(TEMPLATES_KEY);
+  return !!(appData || templates);
 }
 
 export function exportAppData(data: AppData): Blob {
@@ -112,7 +175,23 @@ export function importAppData(file: File): Promise<AppData> {
   });
 }
 
-export function loadUserTemplates(): Template[] {
+export async function loadUserTemplates(): Promise<Template[]> {
+  // If user is authenticated, try to load from D1 database
+  if (authService.getCurrentUser()) {
+    try {
+      return await databaseService.loadUserTemplates();
+    } catch (error) {
+      console.error('Failed to load templates from database, falling back to localStorage:', error);
+      // Fall back to localStorage
+      return loadUserTemplatesFromLocalStorage();
+    }
+  }
+  
+  // Fallback to localStorage for offline use
+  return loadUserTemplatesFromLocalStorage();
+}
+
+function loadUserTemplatesFromLocalStorage(): Template[] {
   try {
     const stored = localStorage.getItem(TEMPLATES_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -122,9 +201,32 @@ export function loadUserTemplates(): Template[] {
   }
 }
 
-export function saveUserTemplate(template: Template): void {
+export async function saveUserTemplate(template: Template): Promise<void> {
+  // If user is authenticated, save to D1 database
+  if (authService.getCurrentUser()) {
+    try {
+      await databaseService.saveUserTemplate(template);
+      // Also save to localStorage as backup
+      const templates = loadUserTemplatesFromLocalStorage();
+      const existingIndex = templates.findIndex(t => t.id === template.id);
+      
+      if (existingIndex >= 0) {
+        templates[existingIndex] = template;
+      } else {
+        templates.push(template);
+      }
+      
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+      return;
+    } catch (error) {
+      console.error('Failed to save template to database, saving to localStorage:', error);
+      // Fall back to localStorage
+    }
+  }
+  
+  // Fallback to localStorage
   try {
-    const templates = loadUserTemplates();
+    const templates = loadUserTemplatesFromLocalStorage();
     const existingIndex = templates.findIndex(t => t.id === template.id);
     
     if (existingIndex >= 0) {
@@ -139,9 +241,24 @@ export function saveUserTemplate(template: Template): void {
   }
 }
 
-export function deleteUserTemplate(templateId: string): void {
+export async function deleteUserTemplate(templateId: string): Promise<void> {
+  // If user is authenticated, delete from D1 database
+  if (authService.getCurrentUser()) {
+    try {
+      await databaseService.deleteUserTemplate(templateId);
+      // Also remove from localStorage
+      const templates = loadUserTemplatesFromLocalStorage().filter(t => t.id !== templateId);
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+      return;
+    } catch (error) {
+      console.error('Failed to delete template from database, removing from localStorage:', error);
+      // Fall back to localStorage
+    }
+  }
+  
+  // Fallback to localStorage
   try {
-    const templates = loadUserTemplates().filter(t => t.id !== templateId);
+    const templates = loadUserTemplatesFromLocalStorage().filter(t => t.id !== templateId);
     localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
   } catch (error) {
     console.error('Failed to delete template:', error);

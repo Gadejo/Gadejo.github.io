@@ -1,0 +1,19 @@
+# Cloudflare D1 Configuration for ADHD Learning RPG
+name = "adhd-learning-rpg"
+main = "functions/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "adhd-learning-rpg"
+database_id = "your-d1-database-id"  # Replace with your actual D1 database ID
+
+# Pages configuration for deployment
+[env.production]
+vars = { NODE_ENV = "production" }
+
+# Local development configuration
+[env.development]
+vars = { NODE_ENV = "development" }

@@ -7,10 +7,17 @@ import { Stats } from './components/Stats';
 import { Toast, Confetti } from './components/Toast';
 import { ExportImport } from './components/ExportImport';
 import { TemplateManager } from './components/TemplateManager';
+import Login from './components/Login';
+import DataMigration from './components/DataMigration';
+import { authService } from './services/auth';
 import type { SubjectConfig, Template, AppData } from './types';
 import './styles/index.css';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showMigration, setShowMigration] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const {
     data,
     setData,
@@ -20,7 +27,8 @@ function App() {
     updateGoal,
     removeGoal,
     setPipCount,
-    toggleDarkMode
+    toggleDarkMode,
+    isLoading: dataLoading
   } = useAppData();
 
   const [currentView, setCurrentView] = useState('dashboard');
@@ -28,13 +36,78 @@ function App() {
   const [confetti, setConfetti] = useState({ isActive: false });
   const [showTemplateManager, setShowTemplateManager] = useState(false);
 
+  // Check authentication on startup
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    if (user) {
+      setIsAuthenticated(true);
+      setShowMigration(true); // Check for migration after authentication
+    }
+    setIsLoading(false);
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    setShowMigration(true);
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setIsAuthenticated(false);
+    setShowMigration(false);
+  };
+
+  const handleMigrationComplete = () => {
+    setShowMigration(false);
+    // Reload data after migration
+    window.location.reload();
+  };
+
   // Apply dark mode
   useEffect(() => {
-    document.documentElement.setAttribute(
-      'data-theme', 
-      data.preferences.dark ? 'dark' : 'light'
+    if (data) {
+      document.documentElement.setAttribute(
+        'data-theme', 
+        data.preferences.dark ? 'dark' : 'light'
+      );
+    }
+  }, [data?.preferences.dark]);
+
+  // Show loading screen
+  if (isLoading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🧠</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading your learning journey...</p>
+        </div>
+      </div>
     );
-  }, [data.preferences.dark]);
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // Show migration screen if needed
+  if (showMigration) {
+    return <DataMigration onMigrationComplete={handleMigrationComplete} />;
+  }
+
+  // Show loading if data hasn't loaded yet
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">📚</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Setting up your workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   const showToast = (message: string) => {
     setToast({ message, isVisible: true });
@@ -187,6 +260,10 @@ function App() {
             <button className="btn" onClick={() => setShowTemplateManager(true)}>
               🎨 Templates
             </button>
+
+            <button className="btn" onClick={handleLogout} title="Sign Out">
+              🚪 Logout
+            </button>
           </div>
 
           <nav>
@@ -311,7 +388,7 @@ function App() {
 
         <footer>
           <span className="pill">
-            Modular • Local-only • No accounts • Build your perfect learning system
+            Modular • Cloud Sync • Private & Secure • Build your perfect learning system
           </span>
         </footer>
       </div>
