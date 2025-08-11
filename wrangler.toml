@@ -6,12 +6,6 @@ compatibility_flags = ["nodejs_compat"]
 # Required by Pages to find your build output
 pages_build_output_dir = "dist"
 
-# --- PRODUCTION D1 binding ---
-[[d1_databases]]
-binding = "DB"
-database_name = "adhd-learning-rpg"
-database_id = "2f5d953f-d723-4aa2-b8a8-8634799e67e2"
-
 # --- PREVIEW D1 binding ---
 [env.preview]
 [[env.preview.d1_databases]]
@@ -19,9 +13,10 @@ binding = "DB"
 database_name = "adhd-learning-rpg-preview"
 database_id = "2584cb5f-3257-49ec-b084-0bba78ba291e"
 
-# Optional env flags
+# --- PRODUCTION D1 binding ---
 [env.production]
 vars = { NODE_ENV = "production" }
-
-[env.development]
-vars = { NODE_ENV = "development" }
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "adhd-learning-rpg"
+database_id = "2f5d953f-d723-4aa2-b8a8-8634799e67e2"
