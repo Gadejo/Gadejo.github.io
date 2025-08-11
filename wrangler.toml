@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "adhd-learning-rpg"
-database_id = "your-d1-database-id"  # Replace with your actual D1 database ID
+database_id = "2584cb5f-3257-49ec-b084-0bba78ba291e"  # Replace with your actual D1 database ID
 
 # Pages configuration for deployment
 [env.production]
