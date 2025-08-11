@@ -476,6 +476,35 @@ class DatabaseService {
       throw error;
     }
   }
+
+  async stepByStepMigration(localStorageData: { appData: AppData, userTemplates: Template[] }): Promise<any> {
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
+    }
+
+    try {
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'stepByStepMigration',
+          token,
+          data: localStorageData
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Step-by-step migration result:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('Step-by-step migration error:', error);
+      throw error;
+    }
+  }
 }
 
 export const databaseService = new DatabaseService();

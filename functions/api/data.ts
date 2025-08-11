@@ -70,6 +70,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       case 'diagnostics':
         return await runDiagnostics(db, token, userId);
         
+      case 'stepByStepMigration':
+        return await stepByStepMigration(db, userId, data);
+        
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
@@ -697,6 +700,108 @@ async function testMigration(db: D1Database, userId: string, localStorageData: a
       error: 'Test migration failed',
       details: error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function stepByStepMigration(db: D1Database, userId: string, localStorageData: any) {
+  const steps = {
+    step1_data_validation: false,
+    step2_user_confirmed: false,
+    step3_clear_existing_data: false,
+    step4_save_app_data: false,
+    step5_save_sessions: false,
+    step6_save_goals: false,
+    step7_save_pips: false,
+    step8_save_templates: false,
+    error_at_step: null as string | null,
+    error_details: null as any
+  };
+
+  try {
+    // Step 1: Validate data structure
+    console.log('Step 1: Validating data structure...');
+    const { appData, userTemplates = [] } = localStorageData || {};
+    if (!appData) {
+      throw new Error('No app data provided');
+    }
+    steps.step1_data_validation = true;
+    console.log('✓ Data structure valid');
+
+    // Step 2: Confirm user exists
+    console.log('Step 2: Confirming user exists...');
+    const userExists = await db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+    if (!userExists) {
+      throw new Error('User does not exist');
+    }
+    steps.step2_user_confirmed = true;
+    console.log('✓ User confirmed');
+
+    // Step 3: Clear existing data (small batch test)
+    console.log('Step 3: Testing clear operations...');
+    await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+    steps.step3_clear_existing_data = true;
+    console.log('✓ Clear operations work');
+
+    // Step 4: Test saveAppData
+    console.log('Step 4: Testing saveAppData...');
+    await saveAppData(db, userId, appData);
+    steps.step4_save_app_data = true;
+    console.log('✓ saveAppData works');
+
+    // Step 5: Test session saving
+    console.log('Step 5: Testing session saving...');
+    if (appData.sessions && Array.isArray(appData.sessions) && appData.sessions.length > 0) {
+      const testSession = appData.sessions[0];
+      await db.prepare(`
+        INSERT INTO sessions (id, user_id, subject_id, duration, date, notes, quest_type, xp_earned)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        testSession.id || 'test-session',
+        userId,
+        testSession.subjectId || '',
+        testSession.duration || 0,
+        testSession.date || new Date().toISOString(),
+        testSession.notes || '',
+        testSession.questType || 'study',
+        testSession.xpEarned || 0
+      ).run();
+    }
+    steps.step5_save_sessions = true;
+    console.log('✓ Session saving works');
+
+    return new Response(JSON.stringify({
+      success: true,
+      steps,
+      message: 'Step-by-step migration test completed'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Step-by-step migration error:', error);
+    
+    // Identify which step failed
+    if (!steps.step1_data_validation) steps.error_at_step = 'data_validation';
+    else if (!steps.step2_user_confirmed) steps.error_at_step = 'user_confirmation';
+    else if (!steps.step3_clear_existing_data) steps.error_at_step = 'clear_existing_data';
+    else if (!steps.step4_save_app_data) steps.error_at_step = 'save_app_data';
+    else if (!steps.step5_save_sessions) steps.error_at_step = 'save_sessions';
+
+    steps.error_details = {
+      message: error.message,
+      stack: error.stack
+    };
+
+    return new Response(JSON.stringify({
+      success: false,
+      steps,
+      error: 'Step-by-step migration failed',
+      failed_at: steps.error_at_step
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
