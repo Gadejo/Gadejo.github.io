@@ -421,6 +421,33 @@ class DatabaseService {
       throw error;
     }
   }
+
+  async ensureUserExists(): Promise<any> {
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
+    }
+
+    try {
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ensureUser',
+          token
+        }),
+      });
+
+      const result = await response.json();
+      return result;
+      
+    } catch (error) {
+      console.error('Ensure user exists error:', error);
+      throw error;
+    }
+  }
 }
 
 export const databaseService = new DatabaseService();

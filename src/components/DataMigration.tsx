@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { migrateLocalStorageToD1, hasLocalStorageData } from '../utils/storage';
+import { databaseService } from '../services/database';
 
 interface DataMigrationProps {
   onMigrationComplete: () => void;
@@ -29,8 +30,18 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
     }
   };
 
-  const handleSkip = () => {
-    onMigrationComplete();
+  const handleSkip = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Ensure user exists in database before proceeding
+      await databaseService.ensureUserExists();
+      onMigrationComplete();
+    } catch (err: any) {
+      setError(err.message || 'Failed to set up user account');
+      setIsLoading(false);
+    }
   };
 
   if (!hasExistingData) {

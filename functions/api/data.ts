@@ -64,6 +64,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       case 'testMigration':
         return await testMigration(db, userId, data);
         
+      case 'ensureUser':
+        return await ensureUserExists(db, userId);
+        
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
@@ -422,11 +425,57 @@ async function migrateFromLocalStorage(db: D1Database, userId: string, localStor
     console.log('Starting migration for user:', userId);
     
     // Check if user exists in database
-    const userExists = await db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+    let userExists = await db.prepare('SELECT id, email, display_name FROM users WHERE id = ?').bind(userId).first();
     if (!userExists) {
-      throw new Error(`User ${userId} does not exist in database. Please ensure you are properly logged in and registered.`);
+      console.log('User does not exist in database, attempting to create from token...');
+      
+      // Try to get user info from token to create the user
+      try {
+        const tokenInfo = await db
+          .prepare(`
+            SELECT s.user_id, u.email, u.display_name
+            FROM user_sessions s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE s.user_id = ? AND s.is_active = 1
+          `)
+          .bind(userId)
+          .first() as any;
+          
+        if (!tokenInfo || !tokenInfo.email) {
+          // Create a minimal user record for migration
+          console.log('Creating minimal user record for migration...');
+          await db
+            .prepare(`
+              INSERT INTO users (id, email, display_name, password_hash, last_active, preferences)
+              VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            `)
+            .bind(
+              userId, 
+              `user-${userId}@temp.local`, // Temporary email
+              'Migrated User', 
+              'migrated-user-hash', // Temporary hash
+              JSON.stringify({ dark: false })
+            )
+            .run();
+          
+          // Create user profile
+          await db
+            .prepare(`
+              INSERT INTO user_profiles (user_id, learning_goals, favorite_subjects, study_schedule)
+              VALUES (?, ?, ?, ?)
+            `)
+            .bind(userId, JSON.stringify([]), JSON.stringify([]), JSON.stringify({}))
+            .run();
+            
+          console.log('Created minimal user record for migration');
+          userExists = { id: userId, email: `user-${userId}@temp.local`, display_name: 'Migrated User' };
+        }
+      } catch (createError) {
+        console.error('Failed to create user for migration:', createError);
+        throw new Error(`User ${userId} does not exist in database and could not be created. Please try registering again.`);
+      }
     }
-    console.log('User exists in database:', userId);
+    console.log('User confirmed in database:', userExists);
     
     console.log('App data keys:', Object.keys(appData));
     console.log('Sessions count:', appData.sessions?.length || 0);
@@ -645,6 +694,70 @@ async function testMigration(db: D1Database, userId: string, localStorageData: a
       error: 'Test migration failed',
       details: error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function ensureUserExists(db: D1Database, userId: string) {
+  try {
+    // Check if user exists
+    const userExists = await db.prepare('SELECT id, email, display_name FROM users WHERE id = ?').bind(userId).first();
+    
+    if (userExists) {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'User already exists',
+        user: userExists
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Create minimal user record
+    console.log('Creating user record for:', userId);
+    await db
+      .prepare(`
+        INSERT INTO users (id, email, display_name, password_hash, last_active, preferences)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+      `)
+      .bind(
+        userId, 
+        `user-${userId}@temp.local`,
+        'User', 
+        'temp-hash',
+        JSON.stringify({ dark: false })
+      )
+      .run();
+    
+    // Create user profile
+    await db
+      .prepare(`
+        INSERT INTO user_profiles (user_id, learning_goals, favorite_subjects, study_schedule)
+        VALUES (?, ?, ?, ?)
+      `)
+      .bind(userId, JSON.stringify([]), JSON.stringify([]), JSON.stringify({}))
+      .run();
+
+    const newUser = { id: userId, email: `user-${userId}@temp.local`, display_name: 'User' };
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'User created successfully',
+      user: newUser
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('Ensure user exists error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to ensure user exists',
+      details: error.message 
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
