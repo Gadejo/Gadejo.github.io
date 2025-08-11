@@ -357,7 +357,17 @@ async function setPipCount(db: D1Database, userId: string, pipData: { subjectId:
 async function migrateFromLocalStorage(db: D1Database, userId: string, localStorageData: any) {
   try {
     // This is a one-time migration function
-    const { appData, userTemplates } = localStorageData;
+    const { appData, userTemplates = [] } = localStorageData;
+    
+    if (!appData) {
+      throw new Error('No app data provided for migration');
+    }
+
+    console.log('Starting migration for user:', userId);
+    console.log('App data keys:', Object.keys(appData));
+    console.log('Sessions count:', appData.sessions?.length || 0);
+    console.log('Goals count:', appData.goals?.length || 0);
+    console.log('Templates count:', userTemplates.length);
     
     // First clear existing data for this user
     await db.batch([
@@ -369,59 +379,102 @@ async function migrateFromLocalStorage(db: D1Database, userId: string, localStor
       db.prepare('DELETE FROM user_templates WHERE user_id = ?').bind(userId)
     ]);
     
-    // Migrate app data
+    // Migrate app data (subjects and preferences)
     await saveAppData(db, userId, appData);
     
-    // Migrate sessions
-    const sessionOps = appData.sessions.map((session: any) => 
-      db.prepare(`
-        INSERT INTO sessions (id, user_id, subject_id, duration, date, notes, quest_type, xp_earned)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        session.id, userId, session.subjectId, session.duration,
-        session.date, session.notes, session.questType, 0
-      )
-    );
+    const batchOps = [];
     
-    // Migrate goals
-    const goalOps = appData.goals.map((goal: any) =>
-      db.prepare(`
-        INSERT INTO goals (id, user_id, title, subject_id, type, target, start_date, due_date, priority, done)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        goal.id, userId, goal.title, goal.subjectId, goal.type,
-        goal.target, goal.startDate, goal.dueDate, goal.priority, goal.done ? 1 : 0
-      )
-    );
+    // Migrate sessions (with null safety)
+    if (appData.sessions && Array.isArray(appData.sessions)) {
+      const sessionOps = appData.sessions.map((session: any) => 
+        db.prepare(`
+          INSERT INTO sessions (id, user_id, subject_id, duration, date, notes, quest_type, xp_earned)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          session.id || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId, 
+          session.subjectId || '',
+          session.duration || 0,
+          session.date || new Date().toISOString(),
+          session.notes || '',
+          session.questType || 'study',
+          session.xpEarned || 0
+        )
+      );
+      batchOps.push(...sessionOps);
+    }
     
-    // Migrate pips
-    const pipOps = [];
-    for (const [date, subjectPips] of Object.entries(appData.pips as Record<string, Record<string, number>>)) {
-      for (const [subjectId, count] of Object.entries(subjectPips)) {
-        pipOps.push(
-          db.prepare(`
-            INSERT INTO pips (user_id, date, subject_id, count)
-            VALUES (?, ?, ?, ?)
-          `).bind(userId, date, subjectId, count)
-        );
+    // Migrate goals (with null safety)
+    if (appData.goals && Array.isArray(appData.goals)) {
+      const goalOps = appData.goals.map((goal: any) =>
+        db.prepare(`
+          INSERT INTO goals (id, user_id, title, subject_id, type, target, start_date, due_date, priority, done)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          goal.id || `goal-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId,
+          goal.title || 'Untitled Goal',
+          goal.subjectId || '',
+          goal.type || 'minutes',
+          goal.target || 0,
+          goal.startDate || new Date().toISOString(),
+          goal.dueDate || null,
+          goal.priority || 'medium',
+          goal.done ? 1 : 0
+        )
+      );
+      batchOps.push(...goalOps);
+    }
+    
+    // Migrate pips (with null safety)
+    if (appData.pips && typeof appData.pips === 'object') {
+      for (const [date, subjectPips] of Object.entries(appData.pips as Record<string, any>)) {
+        if (subjectPips && typeof subjectPips === 'object') {
+          for (const [subjectId, count] of Object.entries(subjectPips)) {
+            if (typeof count === 'number' && count > 0) {
+              batchOps.push(
+                db.prepare(`
+                  INSERT INTO pips (user_id, date, subject_id, count)
+                  VALUES (?, ?, ?, ?)
+                `).bind(userId, date, subjectId, count)
+              );
+            }
+          }
+        }
       }
     }
     
-    // Migrate user templates
-    const templateOps = userTemplates.map((template: any) =>
-      db.prepare(`
-        INSERT INTO user_templates (id, user_id, name, description, category, author, version, subjects, default_goals)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        template.id, userId, template.name, template.description,
-        template.category, template.author, template.version,
-        JSON.stringify(template.subjects), JSON.stringify(template.defaultGoals || [])
-      )
-    );
+    // Migrate user templates (with null safety)
+    if (userTemplates && Array.isArray(userTemplates)) {
+      const templateOps = userTemplates.map((template: any) =>
+        db.prepare(`
+          INSERT INTO user_templates (id, user_id, name, description, category, author, version, subjects, default_goals)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          template.id || `template-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId,
+          template.name || 'Untitled Template',
+          template.description || '',
+          template.category || 'custom',
+          template.author || 'User',
+          template.version || '1.0.0',
+          JSON.stringify(template.subjects || []),
+          JSON.stringify(template.defaultGoals || [])
+        )
+      );
+      batchOps.push(...templateOps);
+    }
     
-    // Execute all migration operations
-    await db.batch([...sessionOps, ...goalOps, ...pipOps, ...templateOps]);
+    // Execute all migration operations in batches to avoid limits
+    if (batchOps.length > 0) {
+      const batchSize = 25; // D1 batch limit
+      for (let i = 0; i < batchOps.length; i += batchSize) {
+        const batch = batchOps.slice(i, i + batchSize);
+        await db.batch(batch);
+      }
+    }
 
+    console.log('Migration completed successfully');
     return new Response(JSON.stringify({ success: true, message: 'Migration completed' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -429,7 +482,15 @@ async function migrateFromLocalStorage(db: D1Database, userId: string, localStor
     
   } catch (error) {
     console.error('Migration error:', error);
-    return new Response(JSON.stringify({ error: 'Migration failed' }), {
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      localStorageData: localStorageData ? Object.keys(localStorageData) : 'null'
+    });
+    return new Response(JSON.stringify({ 
+      error: 'Migration failed',
+      details: error.message 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
