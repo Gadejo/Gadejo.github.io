@@ -22,7 +22,7 @@ export function TemplateManager({
 
   useEffect(() => {
     if (isOpen) {
-      setUserTemplates(loadUserTemplates());
+      loadUserTemplates().then(setUserTemplates);
     }
   }, [isOpen]);
 

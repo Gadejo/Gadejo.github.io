@@ -66,6 +66,8 @@ export function useAppData() {
   }, [data]);
 
   const addSubject = useCallback((config: SubjectConfig) => {
+    if (!data) return;
+    
     const subjectData: SubjectData = {
       config,
       totalMinutes: 0,
@@ -76,32 +78,32 @@ export function useAppData() {
       totalXP: 0
     };
 
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        subjects: {
-          ...prevData.subjects,
-          [config.id]: subjectData
-        }
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+    const newData: AppData = {
+      ...data,
+      subjects: {
+        ...data.subjects,
+        [config.id]: subjectData
+      }
+    };
+    
+    setData(newData);
+    saveAppData(newData);
+  }, [data]);
 
   const removeSubject = useCallback((subjectId: string) => {
-    setData(prevData => {
-      const { [subjectId]: removed, ...remainingSubjects } = prevData.subjects;
-      const newData = {
-        ...prevData,
-        subjects: remainingSubjects,
-        sessions: prevData.sessions.filter(s => s.subjectId !== subjectId),
-        goals: prevData.goals.filter(g => g.subjectId !== subjectId)
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+    if (!data) return;
+    
+    const { [subjectId]: removed, ...remainingSubjects } = data.subjects;
+    const newData: AppData = {
+      ...data,
+      subjects: remainingSubjects,
+      sessions: data.sessions.filter(s => s.subjectId !== subjectId),
+      goals: data.goals.filter(g => g.subjectId !== subjectId)
+    };
+    
+    setData(newData);
+    saveAppData(newData);
+  }, [data]);
 
   const addSession = useCallback(async (session: Omit<Session, 'id'>) => {
     if (!data) return null;
@@ -191,84 +193,153 @@ export function useAppData() {
     return newSession;
   }, [data]);
 
-  const addGoal = useCallback((goal: Omit<Goal, 'id'>) => {
+  const addGoal = useCallback(async (goal: Omit<Goal, 'id'>) => {
+    if (!data) return;
+    
     const newGoal: Goal = {
       ...goal,
       id: `goal-${Date.now()}-${Math.random().toString(36).slice(2)}`
     };
 
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        goals: [...prevData.goals, newGoal]
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+    const newData: AppData = {
+      ...data,
+      goals: [...data.goals, newGoal]
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to add goal to database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.addGoal(goal);
+      } catch (error) {
+        console.error('Failed to save goal to database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
-  const updateGoal = useCallback((goalId: string, updates: Partial<Goal>) => {
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        goals: prevData.goals.map(goal =>
-          goal.id === goalId ? { ...goal, ...updates } : goal
-        )
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+  const updateGoal = useCallback(async (goalId: string, updates: Partial<Goal>) => {
+    if (!data) return;
+    
+    const newData: AppData = {
+      ...data,
+      goals: data.goals.map(goal =>
+        goal.id === goalId ? { ...goal, ...updates } : goal
+      )
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to update goal in database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.updateGoal(goalId, updates);
+      } catch (error) {
+        console.error('Failed to update goal in database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
-  const removeGoal = useCallback((goalId: string) => {
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        goals: prevData.goals.filter(goal => goal.id !== goalId)
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+  const removeGoal = useCallback(async (goalId: string) => {
+    if (!data) return;
+    
+    const newData: AppData = {
+      ...data,
+      goals: data.goals.filter(goal => goal.id !== goalId)
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to delete goal from database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.deleteGoal(goalId);
+      } catch (error) {
+        console.error('Failed to delete goal from database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
-  const setPipCount = useCallback((subjectId: string, date: string, count: number) => {
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        pips: {
-          ...prevData.pips,
-          [date]: {
-            ...prevData.pips[date],
-            [subjectId]: count
-          }
+  const setPipCount = useCallback(async (subjectId: string, date: string, count: number) => {
+    if (!data) return;
+    
+    const newData: AppData = {
+      ...data,
+      pips: {
+        ...data.pips,
+        [date]: {
+          ...data.pips[date],
+          [subjectId]: count
         }
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+      }
+    };
+    
+    setData(newData);
+    
+    // If authenticated, try to update pip count in database
+    if (authService.getCurrentUser()) {
+      try {
+        await databaseService.setPipCount(subjectId, date, count);
+      } catch (error) {
+        console.error('Failed to update pip count in database:', error);
+      }
+    }
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
-  const toggleDarkMode = useCallback(() => {
-    setData(prevData => {
-      const newData = {
-        ...prevData,
-        preferences: {
-          ...prevData.preferences,
-          dark: !prevData.preferences.dark
-        }
-      };
-      saveAppData(newData);
-      return newData;
-    });
-  }, []);
+  const toggleDarkMode = useCallback(async () => {
+    if (!data) return;
+    
+    const newData: AppData = {
+      ...data,
+      preferences: {
+        ...data.preferences,
+        dark: !data.preferences.dark
+      }
+    };
+    
+    setData(newData);
+    
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [data]);
 
   // Auto-save when data changes
   useEffect(() => {
-    saveAppData(data);
+    if (data) {
+      saveAppData(data);
+    }
   }, [data]);
 
   return {
     data,
+    isLoading,
     setData: saveData,
     updateSubject,
     addSubject,

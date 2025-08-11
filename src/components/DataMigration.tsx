@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { migrateLocalStorageToD1, hasLocalStorageData } from '../utils/storage';
 
 interface DataMigrationProps {

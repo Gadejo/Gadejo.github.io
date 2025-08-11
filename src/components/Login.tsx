@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { authService } from '../services/auth';
 
 interface LoginProps {
@@ -23,7 +23,8 @@ export default function Login({ onLogin }: LoginProps) {
     setError(null);
 
     try {
-      await authService.login(password);
+      // This is for backward compatibility - AuthScreen is the new component
+      await authService.login({ email: 'legacy@example.com', password });
       onLogin();
     } catch (err: any) {
       if (err.message.includes('No user found') || err.message.includes('first time')) {

@@ -7,7 +7,7 @@ import { Stats } from './components/Stats';
 import { Toast, Confetti } from './components/Toast';
 import { ExportImport } from './components/ExportImport';
 import { TemplateManager } from './components/TemplateManager';
-import Login from './components/Login';
+import AuthScreen from './components/AuthScreen';
 import DataMigration from './components/DataMigration';
 import { authService } from './services/auth';
 import type { SubjectConfig, Template, AppData } from './types';
@@ -88,7 +88,7 @@ function App() {
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return <AuthScreen onLogin={handleLogin} />;
   }
 
   // Show migration screen if needed

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { authService } from '../services/auth';
 import type { PublicUser } from '../types/auth';
 
