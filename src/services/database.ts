@@ -393,6 +393,34 @@ class DatabaseService {
       throw error;
     }
   }
+
+  async testMigration(localStorageData: { appData: AppData, userTemplates: Template[] }): Promise<any> {
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
+    }
+
+    try {
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'testMigration',
+          token,
+          data: localStorageData
+        }),
+      });
+
+      const result = await response.json();
+      return result;
+      
+    } catch (error) {
+      console.error('Test migration error:', error);
+      throw error;
+    }
+  }
 }
 
 export const databaseService = new DatabaseService();

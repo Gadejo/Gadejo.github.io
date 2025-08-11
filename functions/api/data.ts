@@ -61,6 +61,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       case 'migrateFromLocalStorage':
         return await migrateFromLocalStorage(db, userId, data);
         
+      case 'testMigration':
+        return await testMigration(db, userId, data);
+        
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
@@ -151,47 +154,100 @@ async function loadAppData(db: D1Database, userId: string) {
 
 async function saveAppData(db: D1Database, userId: string, appData: any) {
   try {
+    console.log('saveAppData - appData structure:', {
+      hasPreferences: !!appData.preferences,
+      hasSubjects: !!appData.subjects,
+      subjectsType: typeof appData.subjects,
+      subjectsKeys: appData.subjects ? Object.keys(appData.subjects) : null
+    });
+
     // Start a transaction by batching operations
     const operations = [];
 
-    // Save preferences
+    // Save preferences (with default if missing)
+    const preferences = appData.preferences || { dark: false };
     operations.push(
       db.prepare('UPDATE users SET preferences = ? WHERE id = ?')
-        .bind(JSON.stringify(appData.preferences), userId)
+        .bind(JSON.stringify(preferences), userId)
     );
 
-    // Save subjects
-    for (const [subjectId, subject] of Object.entries(appData.subjects as Record<string, any>)) {
-      const { config, ...subjectData } = subject;
+    // Save subjects (with null safety)
+    if (appData.subjects && typeof appData.subjects === 'object') {
+      for (const [subjectId, subject] of Object.entries(appData.subjects as Record<string, any>)) {
+        console.log('Processing subject:', subjectId, 'structure:', Object.keys(subject || {}));
+        
+        // Handle different subject data structures
+        let config, subjectData;
+        if (subject && typeof subject === 'object') {
+          if (subject.config) {
+            // New structure with separate config
+            config = subject.config;
+            subjectData = { ...subject };
+            delete subjectData.config;
+          } else {
+            // Older structure where subject IS the config
+            config = subject;
+            subjectData = {
+              totalMinutes: subject.totalMinutes || 0,
+              currentStreak: subject.currentStreak || 0,
+              longestStreak: subject.longestStreak || 0,
+              achievementLevel: subject.achievementLevel || 0,
+              lastStudyDate: subject.lastStudyDate || null,
+              totalXP: subject.totalXP || 0
+            };
+          }
+        } else {
+          console.warn('Invalid subject data for:', subjectId);
+          continue;
+        }
+        
+        // Ensure config has required fields with defaults
+        const safeConfig = {
+          id: config.id || subjectId,
+          name: config.name || 'Unknown Subject',
+          emoji: config.emoji || '📚',
+          color: config.color || '#3B82F6',
+          pipAmount: config.pipAmount || 5,
+          targetHours: config.targetHours || 8,
+          achievements: config.achievements || [],
+          questTypes: config.questTypes || ['study'],
+          resources: config.resources || [],
+          customFields: config.customFields || {}
+        };
       
-      // Upsert subject config
-      operations.push(
-        db.prepare(`
-          INSERT OR REPLACE INTO subject_configs 
-          (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `).bind(
-          config.id, userId, config.name, config.emoji, config.color,
-          config.pipAmount, config.targetHours,
-          JSON.stringify(config.achievements),
-          JSON.stringify(config.questTypes),
-          JSON.stringify(config.resources),
-          JSON.stringify(config.customFields || {})
-        )
-      );
-      
-      // Upsert subject data
-      operations.push(
-        db.prepare(`
-          INSERT OR REPLACE INTO subjects 
-          (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `).bind(
-          subjectId, userId, subjectData.totalMinutes, subjectData.currentStreak,
-          subjectData.longestStreak, subjectData.achievementLevel,
-          subjectData.lastStudyDate, subjectData.totalXP
-        )
-      );
+        // Upsert subject config with safe values
+        operations.push(
+          db.prepare(`
+            INSERT OR REPLACE INTO subject_configs 
+            (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `).bind(
+            safeConfig.id, userId, safeConfig.name, safeConfig.emoji, safeConfig.color,
+            safeConfig.pipAmount, safeConfig.targetHours,
+            JSON.stringify(safeConfig.achievements),
+            JSON.stringify(safeConfig.questTypes),
+            JSON.stringify(safeConfig.resources),
+            JSON.stringify(safeConfig.customFields)
+          )
+        );
+        
+        // Upsert subject data with safe values
+        operations.push(
+          db.prepare(`
+            INSERT OR REPLACE INTO subjects 
+            (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `).bind(
+            subjectId, userId, 
+            subjectData.totalMinutes || 0, 
+            subjectData.currentStreak || 0,
+            subjectData.longestStreak || 0, 
+            subjectData.achievementLevel || 0,
+            subjectData.lastStudyDate, 
+            subjectData.totalXP || 0
+          )
+        );
+      }
     }
 
     // Execute all operations
@@ -536,6 +592,46 @@ async function verifyTokenAndGetUserId(db: D1Database, token: string): Promise<s
   } catch (error) {
     console.error('Token verification error:', error);
     return null;
+  }
+}
+
+async function testMigration(db: D1Database, userId: string, localStorageData: any) {
+  try {
+    console.log('Test migration - userId:', userId);
+    console.log('Test migration - localStorageData keys:', localStorageData ? Object.keys(localStorageData) : 'null');
+    
+    // Test just the saveAppData function first
+    if (localStorageData?.appData) {
+      console.log('Testing saveAppData...');
+      await saveAppData(db, userId, localStorageData.appData);
+      console.log('saveAppData completed successfully');
+    } else {
+      console.log('No appData found in localStorageData');
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Test migration completed',
+      data: {
+        userId,
+        hasAppData: !!localStorageData?.appData,
+        appDataKeys: localStorageData?.appData ? Object.keys(localStorageData.appData) : null
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('Test migration error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Test migration failed',
+      details: error.message,
+      stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
