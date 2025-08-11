@@ -67,6 +67,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       case 'ensureUser':
         return await ensureUserExists(db, userId);
         
+      case 'diagnostics':
+        return await runDiagnostics(db, token, userId);
+        
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
@@ -694,6 +697,73 @@ async function testMigration(db: D1Database, userId: string, localStorageData: a
       error: 'Test migration failed',
       details: error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function runDiagnostics(db: D1Database, token: string, userId: string) {
+  const results = {
+    step1_token_received: !!token,
+    step2_userId_extracted: !!userId,
+    step3_db_connection: false,
+    step4_user_exists: false,
+    step5_token_verification: false,
+    error_details: null as any,
+    userId_value: userId,
+    token_length: token ? token.length : 0
+  };
+  
+  try {
+    // Step 3: Test database connection
+    console.log('Testing database connection...');
+    const dbTest = await db.prepare('SELECT 1 as test').first();
+    results.step3_db_connection = !!dbTest;
+    console.log('DB connection test:', dbTest);
+    
+    // Step 4: Check if user exists
+    console.log('Checking if user exists...');
+    const userCheck = await db.prepare('SELECT id, email FROM users WHERE id = ?').bind(userId).first();
+    results.step4_user_exists = !!userCheck;
+    console.log('User check result:', userCheck);
+    
+    // Step 5: Test token verification process
+    console.log('Testing token verification...');
+    const tokenHash = await hashPassword(token);
+    const sessionCheck = await db
+      .prepare(`
+        SELECT s.user_id, s.expires_at, u.email
+        FROM user_sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.token_hash = ? AND s.is_active = 1 AND u.is_active = 1
+      `)
+      .bind(tokenHash)
+      .first();
+    results.step5_token_verification = !!sessionCheck;
+    console.log('Token verification result:', sessionCheck);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      diagnostics: results,
+      message: 'Diagnostics completed'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('Diagnostics error:', error);
+    results.error_details = {
+      message: error.message,
+      stack: error.stack
+    };
+    
+    return new Response(JSON.stringify({
+      success: false,
+      diagnostics: results,
+      error: 'Diagnostics failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

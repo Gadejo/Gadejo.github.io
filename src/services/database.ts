@@ -448,6 +448,34 @@ class DatabaseService {
       throw error;
     }
   }
+
+  async runDiagnostics(): Promise<any> {
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
+    }
+
+    try {
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'diagnostics',
+          token
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Diagnostics result:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('Diagnostics error:', error);
+      throw error;
+    }
+  }
 }
 
 export const databaseService = new DatabaseService();

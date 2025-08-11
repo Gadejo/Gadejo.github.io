@@ -18,12 +18,23 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
     setError(null);
 
     try {
+      // First run diagnostics to understand what's happening
+      console.log('Running pre-migration diagnostics...');
+      const diagnostics = await databaseService.runDiagnostics();
+      console.log('Diagnostics completed:', diagnostics);
+      
+      if (!diagnostics.success) {
+        throw new Error(`Diagnostics failed: ${JSON.stringify(diagnostics)}`);
+      }
+      
+      // Proceed with migration
       await migrateLocalStorageToD1();
       setSuccess(true);
       setTimeout(() => {
         onMigrationComplete();
       }, 2000);
     } catch (err: any) {
+      console.error('Migration error details:', err);
       setError(err.message || 'Migration failed');
     } finally {
       setIsLoading(false);
