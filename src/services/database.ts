@@ -37,9 +37,9 @@ class DatabaseService {
   }
 
   async saveAppData(data: AppData): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -50,7 +50,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'saveAppData',
-          userId,
+          token,
           data
         }),
       });
@@ -68,9 +68,9 @@ class DatabaseService {
   }
 
   async addSession(session: Omit<Session, 'id'>): Promise<Session> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     const newSession: Session = {
@@ -86,7 +86,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'addSession',
-          userId,
+          token,
           data: newSession
         }),
       });
@@ -106,9 +106,9 @@ class DatabaseService {
   }
 
   async updateSubject(subjectId: string, updates: Partial<SubjectData>): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -119,7 +119,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'updateSubject',
-          userId,
+          token,
           id: subjectId,
           data: updates
         }),
@@ -138,9 +138,9 @@ class DatabaseService {
   }
 
   async addGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     const newGoal: Goal = {
@@ -156,7 +156,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'addGoal',
-          userId,
+          token,
           data: newGoal
         }),
       });
@@ -176,9 +176,9 @@ class DatabaseService {
   }
 
   async updateGoal(goalId: string, updates: Partial<Goal>): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -189,7 +189,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'updateGoal',
-          userId,
+          token,
           id: goalId,
           data: updates
         }),
@@ -208,9 +208,9 @@ class DatabaseService {
   }
 
   async deleteGoal(goalId: string): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -221,7 +221,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'deleteGoal',
-          userId,
+          token,
           id: goalId
         }),
       });
@@ -239,9 +239,9 @@ class DatabaseService {
   }
 
   async setPipCount(subjectId: string, date: string, count: number): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -252,7 +252,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'setPipCount',
-          userId,
+          token,
           data: { subjectId, date, count }
         }),
       });
@@ -270,9 +270,9 @@ class DatabaseService {
   }
 
   async loadUserTemplates(): Promise<Template[]> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -283,7 +283,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'loadUserTemplates',
-          userId
+          token
         }),
       });
 
@@ -302,9 +302,9 @@ class DatabaseService {
   }
 
   async saveUserTemplate(template: Template): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -315,7 +315,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'saveUserTemplate',
-          userId,
+          token,
           template
         }),
       });
@@ -333,9 +333,9 @@ class DatabaseService {
   }
 
   async deleteUserTemplate(templateId: string): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -346,7 +346,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'deleteUserTemplate',
-          userId,
+          token,
           templateId
         }),
       });
@@ -364,9 +364,9 @@ class DatabaseService {
   }
 
   async migrateFromLocalStorage(localStorageData: { appData: AppData, userTemplates: Template[] }): Promise<void> {
-    const userId = authService.getUserId();
-    if (!userId) {
-      throw new Error('Not authenticated');
+    const token = authService.getStoredToken();
+    if (!token) {
+      throw new Error('Authentication token required');
     }
 
     try {
@@ -377,7 +377,7 @@ class DatabaseService {
         },
         body: JSON.stringify({
           action: 'migrateFromLocalStorage',
-          userId,
+          token,
           data: localStorageData
         }),
       });
