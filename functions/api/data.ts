@@ -420,6 +420,14 @@ async function migrateFromLocalStorage(db: D1Database, userId: string, localStor
     }
 
     console.log('Starting migration for user:', userId);
+    
+    // Check if user exists in database
+    const userExists = await db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+    if (!userExists) {
+      throw new Error(`User ${userId} does not exist in database. Please ensure you are properly logged in and registered.`);
+    }
+    console.log('User exists in database:', userId);
+    
     console.log('App data keys:', Object.keys(appData));
     console.log('Sessions count:', appData.sessions?.length || 0);
     console.log('Goals count:', appData.goals?.length || 0);
@@ -600,6 +608,13 @@ async function testMigration(db: D1Database, userId: string, localStorageData: a
     console.log('Test migration - userId:', userId);
     console.log('Test migration - localStorageData keys:', localStorageData ? Object.keys(localStorageData) : 'null');
     
+    // Check if user exists
+    const userExists = await db.prepare('SELECT id, email, display_name FROM users WHERE id = ?').bind(userId).first();
+    console.log('User exists:', !!userExists);
+    if (userExists) {
+      console.log('User details:', userExists);
+    }
+    
     // Test just the saveAppData function first
     if (localStorageData?.appData) {
       console.log('Testing saveAppData...');
@@ -614,6 +629,8 @@ async function testMigration(db: D1Database, userId: string, localStorageData: a
       message: 'Test migration completed',
       data: {
         userId,
+        userExists: !!userExists,
+        userDetails: userExists || null,
         hasAppData: !!localStorageData?.appData,
         appDataKeys: localStorageData?.appData ? Object.keys(localStorageData.appData) : null
       }
