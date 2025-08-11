@@ -1,22 +1,25 @@
-# Cloudflare Pages + D1 config
+# Cloudflare Pages + D1
 name = "adhd-learning-rpg"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Required by Pages to find your build output
+# Pages needs this to find your build output
 pages_build_output_dir = "dist"
 
-# --- PREVIEW D1 binding ---
-[env.preview]
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "adhd-learning-rpg-preview"
-database_id = "2584cb5f-3257-49ec-b084-0bba78ba291e"
-
-# --- PRODUCTION D1 binding ---
+# ---------- PRODUCTION (main branch) ----------
 [env.production]
 vars = { NODE_ENV = "production" }
+
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "adhd-learning-rpg"
 database_id = "2f5d953f-d723-4aa2-b8a8-8634799e67e2"
+
+# ---------- PREVIEW (PRs/preview deploys) ----------
+[env.preview]
+# (optional) vars = { NODE_ENV = "preview" }
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "adhd-learning-rpg-preview"
+database_id = "2584cb5f-3257-49ec-b084-0bba78ba291e"
