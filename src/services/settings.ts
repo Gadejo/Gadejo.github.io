@@ -253,7 +253,7 @@ class SettingsService {
 
     try {
       // Check if we're in development mode and skip API call
-      if (import.meta.env.DEV) {
+      if (import.meta.env?.DEV) {
         console.log('Development mode: using default settings');
         return null;
       }
@@ -291,7 +291,7 @@ class SettingsService {
     if (!token) throw new Error('Authentication required');
 
     // Skip API call in development mode
-    if (import.meta.env.DEV) {
+    if (import.meta.env?.DEV) {
       console.log('Development mode: skipping settings save to database');
       return;
     }

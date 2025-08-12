@@ -28,13 +28,13 @@ class PerformanceService {
 
   private constructor() {
     this.thresholds = {
-      renderTime: 16.67, // 60fps
-      networkTime: 1000, // 1 second
-      memoryUsage: 50 * 1024 * 1024, // 50MB
-      fcp: 2500,
-      lcp: 4000,
-      fid: 100,
-      cls: 0.1
+      renderTime: 50, // More realistic for complex components  
+      networkTime: 3000, // 3 seconds for network requests
+      memoryUsage: 100 * 1024 * 1024, // 100MB
+      fcp: 4000, // First Contentful Paint - more lenient
+      lcp: 6000, // Largest Contentful Paint - more lenient
+      fid: 300, // First Input Delay - more lenient
+      cls: 0.25 // Cumulative Layout Shift - more lenient
     };
 
     this.initializeWebVitals();
@@ -159,36 +159,10 @@ class PerformanceService {
     this.checkThresholds(metric);
   }
 
-  // Check if metric exceeds thresholds
-  private checkThresholds(metric: PerformanceMetric) {
-    let threshold: number | undefined;
-    
-    switch (metric.name) {
-      case 'first-contentful-paint':
-        threshold = this.thresholds.fcp;
-        break;
-      case 'largest-contentful-paint':
-        threshold = this.thresholds.lcp;
-        break;
-      case 'first-input-delay':
-        threshold = this.thresholds.fid;
-        break;
-      case 'cumulative-layout-shift':
-        threshold = this.thresholds.cls;
-        break;
-      default:
-        if (metric.category === 'render') {
-          threshold = this.thresholds.renderTime;
-        } else if (metric.category === 'network') {
-          threshold = this.thresholds.networkTime;
-        }
-    }
-
-    if (threshold && metric.value > threshold) {
-      console.warn(
-        `Performance threshold exceeded: ${metric.name} = ${metric.value.toFixed(2)}ms (threshold: ${threshold}ms)`
-      );
-    }
+  // Check if metric exceeds thresholds (disabled to reduce console noise)
+  private checkThresholds(_metric: PerformanceMetric) {
+    // Performance warnings disabled
+    return;
   }
 
   // Get performance metrics

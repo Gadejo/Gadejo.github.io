@@ -89,6 +89,14 @@ function App() {
   const levelingSystem = LevelingSystem.getInstance();
   const achievementEngine = AchievementEngine.getInstance();
 
+  const showToast = useCallback((message: string) => {
+    setToast({ message, isVisible: true, type: 'success' });
+  }, []);
+
+  const showEnhancedToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
+    setToast({ message, isVisible: true, type });
+  }, []);
+
   // Enhanced gesture navigation with memoized callbacks
   const onSwipeLeft = useCallback(() => {
     const views = ['dashboard', 'goals', 'resources', 'stats', 'settings'];
@@ -197,14 +205,6 @@ function App() {
   };
 
 
-  const showToast = useCallback((message: string) => {
-    setToast({ message, isVisible: true, type: 'success' });
-  }, []);
-
-  const showEnhancedToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
-    setToast({ message, isVisible: true, type });
-  }, []);
-
   const showXPNotification = useCallback((xp: number, position?: { x: number; y: number }) => {
     setXpNotification({ 
       xp, 
@@ -234,7 +234,7 @@ function App() {
 
   const handleAddSession = (session: Omit<any, 'id'>) => {
     addSession(session);
-    const subject = data.subjects[session.subjectId];
+    const subject = data?.subjects[session.subjectId];
     
     if (subject) {
       const questType = subject.config.questTypes.find(q => q.id === session.questType);
@@ -269,14 +269,14 @@ function App() {
 
   const handlePipClick = (subjectId: string) => {
     const today = new Date().toISOString().slice(0, 10);
-    const currentPips = data.pips[today]?.[subjectId] || 0;
+    const currentPips = data?.pips?.[today]?.[subjectId] || 0;
     
     if (currentPips >= 3) {
       showToast('All pips used today');
       return;
     }
 
-    const subject = data.subjects[subjectId];
+    const subject = data?.subjects?.[subjectId];
     if (!subject) return;
 
     setPipCount(subjectId, today, currentPips + 1);
@@ -298,8 +298,8 @@ function App() {
     const today = new Date().toISOString().slice(0, 10);
     const result: Record<string, number> = {};
     
-    Object.keys(data.subjects).forEach(subjectId => {
-      result[subjectId] = data.pips[today]?.[subjectId] || 0;
+    Object.keys(data?.subjects || {}).forEach(subjectId => {
+      result[subjectId] = data?.pips?.[today]?.[subjectId] || 0;
     });
     
     return result;
@@ -309,10 +309,10 @@ function App() {
     const today = new Date().toISOString().slice(0, 10);
     const result: Record<string, number> = {};
     
-    Object.keys(data.subjects).forEach(subjectId => {
-      const todaysSessions = data.sessions.filter(session => 
+    Object.keys(data?.subjects || {}).forEach(subjectId => {
+      const todaysSessions = data?.sessions?.filter(session => 
         session.subjectId === subjectId && session.date === today
-      );
+      ) || [];
       result[subjectId] = todaysSessions.reduce((total, session) => total + session.duration, 0);
     });
     
@@ -324,7 +324,7 @@ function App() {
     const newSubjects: Record<string, any> = {};
     
     template.subjects.forEach(subjectConfig => {
-      const existingSubject = data.subjects[subjectConfig.id];
+      const existingSubject = data?.subjects?.[subjectConfig.id];
       
       if (existingSubject) {
         // Keep existing progress, update config
@@ -349,8 +349,12 @@ function App() {
     const newData: AppData = {
       ...data,
       subjects: newSubjects,
+      sessions: data?.sessions || [],
+      pips: data?.pips || {},
+      preferences: data?.preferences || { dark: false },
+      version: data?.version || '4.1.0',
       // Keep existing sessions and goals, but add template defaults if none exist
-      goals: data.goals.length > 0 ? data.goals : template.defaultGoals?.map(goal => ({
+      goals: data?.goals && data.goals.length > 0 ? data.goals : template.defaultGoals?.map(goal => ({
         ...goal,
         id: `goal-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         subjectId: template.subjects[0]?.id || ''
@@ -543,7 +547,7 @@ function App() {
             <ErrorBoundary fallback={<DashboardSkeleton />}>
               <div className="view-content entrance-fade" key="dashboard">
                 <Dashboard
-                  subjects={data.subjects}
+                  subjects={data!.subjects}
                   pipCounts={getPipCounts()}
                   todayMinutes={getTodayMinutes()}
                   onAddSubject={handleAddSubject}
@@ -564,16 +568,16 @@ function App() {
               <div className="view-content entrance-slide-left" key="goals">
                 <LazyLoader minHeight="400px">
                   <Goals
-                    subjects={data.subjects}
-                    goals={data.goals}
-                    sessions={data.sessions}
+                    subjects={data!.subjects}
+                    goals={data!.goals}
+                    sessions={data!.sessions}
                     onAddGoal={addGoal}
                     onUpdateGoal={updateGoal}
                     onRemoveGoal={removeGoal}
                     onStartQuest={(subjectId) => {
                       // This would open the quest timer for the specific subject
                       // For now, just show a toast
-                      const subject = data.subjects[subjectId];
+                      const subject = data?.subjects?.[subjectId];
                       if (subject) showToast(`Starting quest for ${subject.config.name}!`);
                     }}
                     onQuickAdd={(subjectId, minutes) => {
@@ -606,7 +610,7 @@ function App() {
               <div className="view-content entrance-slide-up" key="resources">
                 <LazyLoader minHeight="400px">
                   <EnhancedResources
-                    subjects={data.subjects}
+                    subjects={data!.subjects}
                     onShowToast={showToast}
                   />
                 </LazyLoader>
@@ -624,8 +628,8 @@ function App() {
               <div className="view-content entrance-zoom" key="stats">
                 <LazyLoader minHeight="400px">
                   <EnhancedStats
-                    subjects={data.subjects}
-                    sessions={data.sessions}
+                    subjects={data!.subjects}
+                    sessions={data!.sessions}
                   />
                 </LazyLoader>
               </div>
@@ -716,8 +720,8 @@ function App() {
       {showUserProfile && (
         <Suspense fallback={null}>
           <UserProfile
-            subjects={data.subjects}
-            sessions={data.sessions}
+            subjects={data!.subjects}
+            sessions={data!.sessions}
             isOpen={showUserProfile}
             onClose={() => setShowUserProfile(false)}
             onShowToast={showEnhancedToast}
