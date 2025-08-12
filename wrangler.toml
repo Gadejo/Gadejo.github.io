@@ -15,12 +15,15 @@ database_id = "2f5d953f-d723-4aa2-b8a8-8634799e67e2"
 # Global variables for all environments
 [vars]
 APP_NAME = "ADHD Learning RPG"
-APP_VERSION = "4.0.0"
+APP_VERSION = "4.1.0"
 SUPPORT_EMAIL = "support@adhdlearningrpg.com"
 
 # ---------- PRODUCTION (main branch) ----------
 [env.production]
 [env.production.vars]
+APP_NAME = "ADHD Learning RPG"
+APP_VERSION = "4.1.0"
+SUPPORT_EMAIL = "support@adhdlearningrpg.com"
 NODE_ENV = "production"
 API_BASE_URL = "https://gadejo-github-io.pages.dev"
 ENVIRONMENT = "production"
@@ -55,6 +58,9 @@ preview_id = "5417e5e76c5a4a969d07deca94ba716b"
 # ---------- PREVIEW (PRs/preview deploys) ----------
 [env.preview]
 [env.preview.vars]
+APP_NAME = "ADHD Learning RPG"
+APP_VERSION = "4.1.0"
+SUPPORT_EMAIL = "support@adhdlearningrpg.com"
 NODE_ENV = "preview"
 API_BASE_URL = "https://preview.gadejo-github-io.pages.dev"
 ENVIRONMENT = "preview"
