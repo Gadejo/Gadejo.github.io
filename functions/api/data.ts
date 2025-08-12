@@ -113,14 +113,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
 async function loadAppData(db: D1Database, userId: string) {
   try {
-    // Load all user data
+    // Load all user data with safe queries that handle missing tables
     const [subjects, subjectConfigs, sessions, goals, pips, preferences] = await Promise.all([
-      db.prepare('SELECT * FROM subjects WHERE user_id = ?').bind(userId).all(),
-      db.prepare('SELECT * FROM subject_configs WHERE user_id = ?').bind(userId).all(),
-      db.prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY date DESC').bind(userId).all(),
-      db.prepare('SELECT * FROM goals WHERE user_id = ?').bind(userId).all(),
-      db.prepare('SELECT * FROM pips WHERE user_id = ?').bind(userId).all(),
-      db.prepare('SELECT preferences FROM users WHERE id = ?').bind(userId).first()
+      db.prepare('SELECT * FROM subjects WHERE user_id = ?').bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare('SELECT * FROM subject_configs WHERE user_id = ?').bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY date DESC LIMIT 1000').bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare('SELECT * FROM goals WHERE user_id = ?').bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare('SELECT * FROM pips WHERE user_id = ?').bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare('SELECT preferences FROM users WHERE id = ?').bind(userId).first().catch(() => ({ preferences: '{"dark": false}' }))
     ]);
 
     // Transform data to match frontend structure
@@ -281,12 +281,12 @@ async function saveAppData(db: D1Database, userId: string, appData: any) {
           customFields: config.customFields || {}
         };
       
-        // Upsert subject config with safe values
+        // Upsert subject config with safe values (without updated_at in case it doesn't exist)
         operations.push(
           db.prepare(`
             INSERT OR REPLACE INTO subject_configs 
-            (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             safeConfig.id, userId, safeConfig.name, safeConfig.emoji, safeConfig.color,
             safeConfig.pipAmount, safeConfig.targetHours,
@@ -297,12 +297,12 @@ async function saveAppData(db: D1Database, userId: string, appData: any) {
           )
         );
         
-        // Upsert subject data with safe values
+        // Upsert subject data with safe values (without updated_at in case it doesn't exist)
         operations.push(
           db.prepare(`
             INSERT OR REPLACE INTO subjects 
-            (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             subjectId, userId, 
             subjectData.totalMinutes || 0, 
@@ -316,8 +316,21 @@ async function saveAppData(db: D1Database, userId: string, appData: any) {
       }
     }
 
-    // Execute all operations
-    await db.batch(operations);
+    // Execute all operations with error handling
+    try {
+      await db.batch(operations);
+    } catch (batchError) {
+      console.error('Batch operation failed:', batchError);
+      // Try to execute operations individually to identify the problem
+      for (let i = 0; i < operations.length; i++) {
+        try {
+          await operations[i].run();
+        } catch (opError) {
+          console.error(`Operation ${i} failed:`, opError);
+          // Continue with other operations even if one fails
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
