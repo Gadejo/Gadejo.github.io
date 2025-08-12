@@ -138,6 +138,41 @@ async function loadAppData(db: D1Database, userId: string) {
       pipsData[pip.date][pip.subject_id] = pip.count;
     });
 
+    // If no subjects exist for this user, initialize with defaults
+    if (Object.keys(subjectsData).length === 0) {
+      await initializeDefaultSubjects(db, userId);
+      // Reload subjects after initialization
+      const [newSubjects, newSubjectConfigs] = await Promise.all([
+        db.prepare('SELECT * FROM subjects WHERE user_id = ?').bind(userId).all(),
+        db.prepare('SELECT * FROM subject_configs WHERE user_id = ?').bind(userId).all()
+      ]);
+      
+      newSubjectConfigs.results?.forEach((config: any) => {
+        const subjectData = newSubjects.results?.find((s: any) => s.id === config.id);
+        
+        subjectsData[config.id] = {
+          config: {
+            id: config.id,
+            name: config.name,
+            emoji: config.emoji,
+            color: config.color,
+            achievements: JSON.parse(config.achievements),
+            questTypes: JSON.parse(config.quest_types),
+            pipAmount: config.pip_amount,
+            targetHours: config.target_hours,
+            resources: JSON.parse(config.resources),
+            customFields: JSON.parse(config.custom_fields || '{}')
+          },
+          totalMinutes: subjectData?.total_minutes || 0,
+          currentStreak: subjectData?.current_streak || 0,
+          longestStreak: subjectData?.longest_streak || 0,
+          achievementLevel: subjectData?.achievement_level || 0,
+          lastStudyDate: subjectData?.last_study_date || null,
+          totalXP: subjectData?.total_xp || 0
+        };
+      });
+    }
+
     const appData = {
       subjects: subjectsData,
       sessions: sessions.results || [],
@@ -1032,4 +1067,122 @@ async function hashPassword(password: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Initialize default subjects for new users
+async function initializeDefaultSubjects(db: D1Database, userId: string) {
+  const defaultSubjects = [
+    {
+      id: 'japanese',
+      name: 'Japanese',
+      emoji: '🇯🇵',
+      color: '#E53E3E',
+      pipAmount: 15,
+      targetHours: 1,
+      questTypes: [
+        { id: 'easy', name: 'Easy', duration: 15, xp: 10, emoji: '🌟' },
+        { id: 'medium', name: 'Medium', duration: 30, xp: 25, emoji: '⚡' },
+        { id: 'hard', name: 'Hard', duration: 60, xp: 50, emoji: '🏆' }
+      ],
+      achievements: [
+        { id: 'first_step', name: 'First Step', emoji: '🌟', streakRequired: 0 },
+        { id: 'on_fire', name: 'On Fire', emoji: '🔥', streakRequired: 3 },
+        { id: 'power_user', name: 'Power User', emoji: '⚡', streakRequired: 7 },
+        { id: 'champion', name: 'Champion', emoji: '🏆', streakRequired: 14 },
+        { id: 'master', name: 'Master', emoji: '💎', streakRequired: 30 },
+        { id: 'legend', name: 'Legend', emoji: '👑', streakRequired: 60 }
+      ],
+      resources: [
+        { id: '1', title: 'Tae Kim — Complete Grammar Guide', url: 'https://www.guidetojapanese.org/learn/grammar', priority: 'H' },
+        { id: '2', title: 'NHK Easy News — Real Japanese', url: 'https://www3.nhk.or.jp/news/easy/', priority: 'H' },
+        { id: '3', title: 'Jisho — Ultimate Dictionary', url: 'https://jisho.org/', priority: 'H' },
+        { id: '4', title: 'Anki — SRS Flashcards', url: 'https://apps.ankiweb.net/', priority: 'H' }
+      ]
+    },
+    {
+      id: 'programming',
+      name: 'Programming',
+      emoji: '💻',
+      color: '#38A169',
+      pipAmount: 20,
+      targetHours: 1.5,
+      questTypes: [
+        { id: 'easy', name: 'Easy', duration: 15, xp: 10, emoji: '🌟' },
+        { id: 'medium', name: 'Medium', duration: 30, xp: 25, emoji: '⚡' },
+        { id: 'hard', name: 'Hard', duration: 60, xp: 50, emoji: '🏆' }
+      ],
+      achievements: [
+        { id: 'first_step', name: 'First Step', emoji: '🌟', streakRequired: 0 },
+        { id: 'on_fire', name: 'On Fire', emoji: '🔥', streakRequired: 3 },
+        { id: 'power_user', name: 'Power User', emoji: '⚡', streakRequired: 7 },
+        { id: 'champion', name: 'Champion', emoji: '🏆', streakRequired: 14 },
+        { id: 'master', name: 'Master', emoji: '💎', streakRequired: 30 },
+        { id: 'legend', name: 'Legend', emoji: '👑', streakRequired: 60 }
+      ],
+      resources: [
+        { id: '1', title: 'MDN Web Docs', url: 'https://developer.mozilla.org/', priority: 'H' },
+        { id: '2', title: 'JavaScript.info', url: 'https://javascript.info/', priority: 'H' },
+        { id: '3', title: 'FreeCodeCamp', url: 'https://www.freecodecamp.org/', priority: 'H' },
+        { id: '4', title: 'Stack Overflow', url: 'https://stackoverflow.com/', priority: 'M' }
+      ]
+    },
+    {
+      id: 'math',
+      name: 'Mathematics',
+      emoji: '🧮',
+      color: '#3182CE',
+      pipAmount: 25,
+      targetHours: 1,
+      questTypes: [
+        { id: 'easy', name: 'Easy', duration: 15, xp: 10, emoji: '🌟' },
+        { id: 'medium', name: 'Medium', duration: 30, xp: 25, emoji: '⚡' },
+        { id: 'hard', name: 'Hard', duration: 60, xp: 50, emoji: '🏆' }
+      ],
+      achievements: [
+        { id: 'first_step', name: 'First Step', emoji: '🌟', streakRequired: 0 },
+        { id: 'on_fire', name: 'On Fire', emoji: '🔥', streakRequired: 3 },
+        { id: 'power_user', name: 'Power User', emoji: '⚡', streakRequired: 7 },
+        { id: 'champion', name: 'Champion', emoji: '🏆', streakRequired: 14 },
+        { id: 'master', name: 'Master', emoji: '💎', streakRequired: 30 },
+        { id: 'legend', name: 'Legend', emoji: '👑', streakRequired: 60 }
+      ],
+      resources: [
+        { id: '1', title: 'Khan Academy', url: 'https://www.khanacademy.org/', priority: 'H' },
+        { id: '2', title: 'Wolfram Alpha', url: 'https://www.wolframalpha.com/', priority: 'H' },
+        { id: '3', title: 'Desmos Calculator', url: 'https://www.desmos.com/', priority: 'M' },
+        { id: '4', title: 'PatrickJMT', url: 'https://patrickjmt.com/', priority: 'M' }
+      ]
+    }
+  ];
+
+  // Insert default subjects and configs
+  for (const subject of defaultSubjects) {
+    // Insert subject config
+    await db.prepare(`
+      INSERT OR IGNORE INTO subject_configs 
+      (id, user_id, name, emoji, color, achievements, quest_types, pip_amount, target_hours, resources, custom_fields, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).bind(
+      subject.id,
+      userId,
+      subject.name,
+      subject.emoji,
+      subject.color,
+      JSON.stringify(subject.achievements),
+      JSON.stringify(subject.questTypes),
+      subject.pipAmount,
+      subject.targetHours,
+      JSON.stringify(subject.resources),
+      JSON.stringify({})
+    ).run();
+
+    // Insert subject data
+    await db.prepare(`
+      INSERT OR IGNORE INTO subjects 
+      (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp, created_at, updated_at)
+      VALUES (?, ?, 0, 0, 0, 0, NULL, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).bind(subject.id, userId).run();
+  }
+
+  console.log(`Initialized ${defaultSubjects.length} default subjects for user ${userId}`);
 }
