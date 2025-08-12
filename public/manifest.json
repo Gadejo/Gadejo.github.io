@@ -16,8 +16,8 @@
   "id": "adhd-learning-rpg",
   "icons": [
     {
-      "src": "/vite.svg",
-      "sizes": "any",
+      "src": "/icon.svg",
+      "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
@@ -35,8 +35,9 @@
       "url": "/?action=quick-study",
       "icons": [
         {
-          "src": "/vite.svg",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
         }
       ]
     },
@@ -47,8 +48,9 @@
       "url": "/?view=stats",
       "icons": [
         {
-          "src": "/vite.svg",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
         }
       ]
     },
@@ -59,8 +61,9 @@
       "url": "/?view=profile",
       "icons": [
         {
-          "src": "/vite.svg",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
         }
       ]
     },
@@ -71,8 +74,9 @@
       "url": "/?view=goals",
       "icons": [
         {
-          "src": "/vite.svg",
-          "sizes": "96x96"
+          "src": "/icon.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
         }
       ]
     }

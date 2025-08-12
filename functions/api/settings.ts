@@ -124,7 +124,10 @@ async function loadUserSettings(db: D1Database, userId: string) {
   try {
     const userSettings = await db
       .prepare(`
-        SELECT theme, language, notifications, dashboard, privacy, study_preferences, updated_at
+        SELECT theme_preference, language, daily_goal_minutes, weekly_goal_minutes, 
+               study_reminders, reminder_times, break_reminders, achievement_notifications,
+               weekly_reports, auto_save_interval, pip_notification_sound, quest_complete_sound,
+               dashboard_layout, updated_at
         FROM user_settings 
         WHERE user_id = ?
       `)
@@ -141,28 +144,35 @@ async function loadUserSettings(db: D1Database, userId: string) {
       });
     }
 
-    // Parse JSON fields
+    // Parse JSON fields and create settings object matching frontend expectations
     const settings = {
-      theme: userSettings.theme || 'light',
+      theme: userSettings.theme_preference || 'light',
       language: userSettings.language || 'en',
-      notifications: userSettings.notifications ? JSON.parse(userSettings.notifications) : {
-        studyReminders: true,
-        achievementAlerts: true,
-        emailDigest: false
+      notifications: {
+        studyReminders: userSettings.study_reminders || true,
+        achievementAlerts: userSettings.achievement_notifications || true,
+        emailDigest: userSettings.weekly_reports || false,
+        reminderTimes: userSettings.reminder_times ? JSON.parse(userSettings.reminder_times) : ["09:00", "14:00", "19:00"],
+        breakReminders: userSettings.break_reminders || true,
+        pipNotificationSound: userSettings.pip_notification_sound || true,
+        questCompleteSound: userSettings.quest_complete_sound || true
       },
-      dashboard: userSettings.dashboard ? JSON.parse(userSettings.dashboard) : {
-        layout: 'grid',
+      dashboard: {
+        layout: userSettings.dashboard_layout || 'grid',
         showAnimations: true,
         compactView: false
       },
-      privacy: userSettings.privacy ? JSON.parse(userSettings.privacy) : {
+      privacy: {
         shareProgress: false,
         publicProfile: false
       },
-      study: userSettings.study_preferences ? JSON.parse(userSettings.study_preferences) : {
+      study: {
         defaultPomodoroLength: 25,
         autoStartBreaks: false,
-        soundEffects: true
+        soundEffects: true,
+        dailyGoalMinutes: userSettings.daily_goal_minutes || 60,
+        weeklyGoalMinutes: userSettings.weekly_goal_minutes || 420,
+        autoSaveInterval: userSettings.auto_save_interval || 300
       }
     };
 
@@ -194,13 +204,21 @@ async function saveUserSettings(db: D1Database, userId: string, settings: any) {
       .bind(userId)
       .first();
 
+    // Map frontend settings to database schema
     const settingsData = {
-      theme: settings.theme || 'light',
+      theme_preference: settings.theme || 'light',
       language: settings.language || 'en',
-      notifications: JSON.stringify(settings.notifications || {}),
-      dashboard: JSON.stringify(settings.dashboard || {}),
-      privacy: JSON.stringify(settings.privacy || {}),
-      study_preferences: JSON.stringify(settings.study || {})
+      study_reminders: settings.notifications?.studyReminders ? 1 : 0,
+      reminder_times: JSON.stringify(settings.notifications?.reminderTimes || ["09:00", "14:00", "19:00"]),
+      break_reminders: settings.notifications?.breakReminders ? 1 : 0,
+      achievement_notifications: settings.notifications?.achievementAlerts ? 1 : 0,
+      weekly_reports: settings.notifications?.emailDigest ? 1 : 0,
+      auto_save_interval: settings.study?.autoSaveInterval || 300,
+      pip_notification_sound: settings.notifications?.pipNotificationSound ? 1 : 0,
+      quest_complete_sound: settings.notifications?.questCompleteSound ? 1 : 0,
+      daily_goal_minutes: settings.study?.dailyGoalMinutes || 60,
+      weekly_goal_minutes: settings.study?.weeklyGoalMinutes || 420,
+      dashboard_layout: settings.dashboard?.layout || 'grid'
     };
 
     if (existing) {
@@ -208,17 +226,27 @@ async function saveUserSettings(db: D1Database, userId: string, settings: any) {
       await db
         .prepare(`
           UPDATE user_settings 
-          SET theme = ?, language = ?, notifications = ?, dashboard = ?, 
-              privacy = ?, study_preferences = ?, updated_at = CURRENT_TIMESTAMP
+          SET theme_preference = ?, language = ?, study_reminders = ?, reminder_times = ?, 
+              break_reminders = ?, achievement_notifications = ?, weekly_reports = ?,
+              auto_save_interval = ?, pip_notification_sound = ?, quest_complete_sound = ?,
+              daily_goal_minutes = ?, weekly_goal_minutes = ?, dashboard_layout = ?, 
+              updated_at = CURRENT_TIMESTAMP
           WHERE user_id = ?
         `)
         .bind(
-          settingsData.theme,
+          settingsData.theme_preference,
           settingsData.language,
-          settingsData.notifications,
-          settingsData.dashboard,
-          settingsData.privacy,
-          settingsData.study_preferences,
+          settingsData.study_reminders,
+          settingsData.reminder_times,
+          settingsData.break_reminders,
+          settingsData.achievement_notifications,
+          settingsData.weekly_reports,
+          settingsData.auto_save_interval,
+          settingsData.pip_notification_sound,
+          settingsData.quest_complete_sound,
+          settingsData.daily_goal_minutes,
+          settingsData.weekly_goal_minutes,
+          settingsData.dashboard_layout,
           userId
         )
         .run();
@@ -226,17 +254,29 @@ async function saveUserSettings(db: D1Database, userId: string, settings: any) {
       // Insert new settings
       await db
         .prepare(`
-          INSERT INTO user_settings (user_id, theme, language, notifications, dashboard, privacy, study_preferences)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO user_settings (
+            user_id, theme_preference, language, study_reminders, reminder_times, 
+            break_reminders, achievement_notifications, weekly_reports, auto_save_interval, 
+            pip_notification_sound, quest_complete_sound, daily_goal_minutes, 
+            weekly_goal_minutes, dashboard_layout
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .bind(
           userId,
-          settingsData.theme,
+          settingsData.theme_preference,
           settingsData.language,
-          settingsData.notifications,
-          settingsData.dashboard,
-          settingsData.privacy,
-          settingsData.study_preferences
+          settingsData.study_reminders,
+          settingsData.reminder_times,
+          settingsData.break_reminders,
+          settingsData.achievement_notifications,
+          settingsData.weekly_reports,
+          settingsData.auto_save_interval,
+          settingsData.pip_notification_sound,
+          settingsData.quest_complete_sound,
+          settingsData.daily_goal_minutes,
+          settingsData.weekly_goal_minutes,
+          settingsData.dashboard_layout
         )
         .run();
     }

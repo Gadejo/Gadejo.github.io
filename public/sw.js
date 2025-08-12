@@ -233,8 +233,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: 'Time for your study session! 🎮📚',
-    icon: '/vite.svg',
-    badge: '/vite.svg',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -244,12 +244,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'start-study',
         title: 'Start Studying',
-        icon: '/vite.svg'
+        icon: '/icon.svg'
       },
       {
         action: 'remind-later',
         title: 'Remind Later',
-        icon: '/vite.svg'
+        icon: '/icon.svg'
       }
     ],
     requireInteraction: true,
@@ -360,8 +360,8 @@ async function checkStudyReminders() {
       if (hoursSinceLastStudy >= 24) {
         await self.registration.showNotification('Study Reminder', {
           body: 'Haven\'t studied in a while? Keep your streak alive! 🔥',
-          icon: '/vite.svg',
-          badge: '/vite.svg',
+          icon: '/icon.svg',
+          badge: '/icon.svg',
           data: { type: 'reminder' }
         });
       }

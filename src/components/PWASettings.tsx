@@ -130,7 +130,7 @@ export function PWASettings({ isOpen, onClose, onShowToast }: PWASettingsProps) 
         await pwaService.showNotification({
           title: 'Notifications Enabled!',
           body: 'You will now receive study reminders and achievement notifications.',
-          icon: '/vite.svg',
+          icon: '/icon.svg',
           tag: 'notification-test'
         });
       } else {

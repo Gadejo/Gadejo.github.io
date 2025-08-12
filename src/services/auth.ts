@@ -297,6 +297,7 @@ class AuthService {
 
   private clearSession(): void {
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('device_id');
   }
 
   clearUsersCache(): void {
@@ -403,19 +404,40 @@ class AuthService {
   async initializeSession(): Promise<boolean> {
     try {
       // First try localStorage session
-      if (!this.getCurrentUser()) {
+      const user = this.getCurrentUser();
+      if (!user) {
+        console.log('No stored user found');
         return false;
       }
 
-      // Verify the session is still valid
-      const isValid = await this.verifyAuth();
-      if (isValid) {
-        this.startSessionRefresh();
+      // If it's guest mode, accept it without verification
+      if (user.id === 'guest-mode') {
+        console.log('Guest mode detected, skipping verification');
+        return true;
       }
-      
-      return isValid;
+
+      // For regular users, verify the session is still valid
+      try {
+        const isValid = await this.verifyAuth();
+        if (isValid) {
+          this.startSessionRefresh();
+          console.log('Session verified successfully');
+        } else {
+          console.log('Session verification failed, clearing session');
+          this.clearSession();
+        }
+        
+        return isValid;
+      } catch (error) {
+        console.error('Session verification failed:', error);
+        // Clear invalid session data
+        this.clearSession();
+        return false;
+      }
     } catch (error) {
       console.error('Session initialization error:', error);
+      // Clear any corrupted session data
+      this.clearSession();
       return false;
     }
   }

@@ -15,7 +15,7 @@ interface UsePerformanceMonitorOptions {
 
 export function usePerformanceMonitor({
   componentName,
-  logThreshold = 16, // 60fps = ~16.67ms per frame
+  logThreshold = 50, // More realistic threshold for complex components
   onMetrics
 }: UsePerformanceMonitorOptions) {
   const renderStartTime = useRef<number>(0);
@@ -44,18 +44,19 @@ export function usePerformanceMonitor({
       metrics.memoryUsage = memory.usedJSHeapSize;
     }
 
+    // Performance logging disabled to reduce console noise
     // Log warning if render time exceeds threshold
-    if (renderTime > logThreshold) {
-      console.warn(
-        `Performance Warning: ${componentName} render took ${renderTime.toFixed(2)}ms (threshold: ${logThreshold}ms)`,
-        metrics
-      );
-    } else {
-      console.debug(
-        `Performance: ${componentName} rendered in ${renderTime.toFixed(2)}ms`,
-        metrics
-      );
-    }
+    // if (renderTime > logThreshold) {
+    //   console.warn(
+    //     `Performance Warning: ${componentName} render took ${renderTime.toFixed(2)}ms (threshold: ${logThreshold}ms)`,
+    //     metrics
+    //   );
+    // } else {
+    //   console.debug(
+    //     `Performance: ${componentName} rendered in ${renderTime.toFixed(2)}ms`,
+    //     metrics
+    //   );
+    // }
 
     onMetrics?.(metrics);
   }, [componentName, logThreshold, onMetrics]);

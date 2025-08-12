@@ -219,8 +219,8 @@ export class PWAService {
         if (registration) {
           await registration.showNotification(options.title, {
             body: options.body,
-            icon: options.icon || '/vite.svg',
-            badge: options.badge || '/vite.svg',
+            icon: options.icon || '/icon.svg',
+            badge: options.badge || '/icon.svg',
             tag: options.tag,
             requireInteraction: options.requireInteraction,
             silent: options.silent,
@@ -233,7 +233,7 @@ export class PWAService {
         // Fallback to regular notification
         new Notification(options.title, {
           body: options.body,
-          icon: options.icon || '/vite.svg',
+          icon: options.icon || '/icon.svg',
           tag: options.tag
         });
       }

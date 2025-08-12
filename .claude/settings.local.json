@@ -11,7 +11,13 @@
       "Bash(git commit:*)",
       "WebFetch(domain:0dccb009.gadejo-github-io.pages.dev)",
       "Bash(npm run:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx wrangler d1 execute:*)",
+      "WebFetch(domain:gadejo-github-io.pages.dev)",
+      "WebFetch(domain:react.dev)",
+      "Bash(rm:*)",
+      "WebFetch(domain:237e6f82.gadejo-github-io.pages.dev)",
+      "WebFetch(domain:07961d9c.gadejo-github-io.pages.dev)"
     ],
     "deny": []
   }
