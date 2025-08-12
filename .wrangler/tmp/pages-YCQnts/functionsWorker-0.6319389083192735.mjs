@@ -1299,12 +1299,12 @@ var onRequestPost2 = /* @__PURE__ */ __name(async (context2) => {
 async function loadAppData(db, userId) {
   try {
     const [subjects, subjectConfigs, sessions, goals, pips, preferences] = await Promise.all([
-      db.prepare("SELECT * FROM subjects WHERE user_id = ?").bind(userId).all(),
-      db.prepare("SELECT * FROM subject_configs WHERE user_id = ?").bind(userId).all(),
-      db.prepare("SELECT * FROM sessions WHERE user_id = ? ORDER BY date DESC").bind(userId).all(),
-      db.prepare("SELECT * FROM goals WHERE user_id = ?").bind(userId).all(),
-      db.prepare("SELECT * FROM pips WHERE user_id = ?").bind(userId).all(),
-      db.prepare("SELECT preferences FROM users WHERE id = ?").bind(userId).first()
+      db.prepare("SELECT * FROM subjects WHERE user_id = ?").bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare("SELECT * FROM subject_configs WHERE user_id = ?").bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare("SELECT * FROM sessions WHERE user_id = ? ORDER BY date DESC LIMIT 1000").bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare("SELECT * FROM goals WHERE user_id = ?").bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare("SELECT * FROM pips WHERE user_id = ?").bind(userId).all().catch(() => ({ results: [] })),
+      db.prepare("SELECT preferences FROM users WHERE id = ?").bind(userId).first().catch(() => ({ preferences: '{"dark": false}' }))
     ]);
     const subjectsData = {};
     subjectConfigs.results?.forEach((config2) => {
@@ -1440,8 +1440,8 @@ async function saveAppData(db, userId, appData) {
         operations.push(
           db.prepare(`
             INSERT OR REPLACE INTO subject_configs 
-            (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (id, user_id, name, emoji, color, pip_amount, target_hours, achievements, quest_types, resources, custom_fields)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             safeConfig.id,
             userId,
@@ -1459,8 +1459,8 @@ async function saveAppData(db, userId, appData) {
         operations.push(
           db.prepare(`
             INSERT OR REPLACE INTO subjects 
-            (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (id, user_id, total_minutes, current_streak, longest_streak, achievement_level, last_study_date, total_xp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             subjectId,
             userId,
@@ -1474,7 +1474,18 @@ async function saveAppData(db, userId, appData) {
         );
       }
     }
-    await db.batch(operations);
+    try {
+      await db.batch(operations);
+    } catch (batchError) {
+      console.error("Batch operation failed:", batchError);
+      for (let i = 0; i < operations.length; i++) {
+        try {
+          await operations[i].run();
+        } catch (opError) {
+          console.error(`Operation ${i} failed:`, opError);
+        }
+      }
+    }
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -2402,8 +2413,8 @@ var onRequestPost4 = /* @__PURE__ */ __name(async (context2) => {
     const body = await request.json();
     const { action, token, settings } = body;
     const db = env2.DB;
-    if (!token) {
-      if (action === "load") {
+    if (action === "load") {
+      if (!token) {
         return new Response(JSON.stringify({
           success: true,
           settings: null
@@ -2413,6 +2424,23 @@ var onRequestPost4 = /* @__PURE__ */ __name(async (context2) => {
           headers: { "Content-Type": "application/json" }
         });
       }
+      try {
+        const userId2 = await getUserIdFromToken(db, token);
+        if (userId2) {
+          return await loadUserSettings(db, userId2);
+        }
+      } catch (error3) {
+        console.warn("Failed to load user settings, using defaults:", error3);
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        settings: null
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    if (!token) {
       return new Response(JSON.stringify({
         success: false,
         error: "Authentication token required"
@@ -2423,16 +2451,6 @@ var onRequestPost4 = /* @__PURE__ */ __name(async (context2) => {
     }
     const userId = await getUserIdFromToken(db, token);
     if (!userId) {
-      if (action === "load") {
-        return new Response(JSON.stringify({
-          success: true,
-          settings: null
-          // This will trigger default settings usage
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" }
-        });
-      }
       return new Response(JSON.stringify({
         success: false,
         error: "Invalid or expired token"
@@ -2470,7 +2488,8 @@ var onRequestPost4 = /* @__PURE__ */ __name(async (context2) => {
     console.error("Settings API error:", error3);
     return new Response(JSON.stringify({
       success: false,
-      error: "Internal server error"
+      error: "Internal server error",
+      debug: error3 instanceof Error ? error3.message : "Unknown error"
     }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
@@ -2479,6 +2498,9 @@ var onRequestPost4 = /* @__PURE__ */ __name(async (context2) => {
 }, "onRequestPost");
 async function getUserIdFromToken(db, token) {
   try {
+    if (token === "guest-token") {
+      return "guest-mode";
+    }
     const tokenHash = await hashPassword3(token);
     const session = await db.prepare(`
         SELECT s.user_id
@@ -2488,13 +2510,33 @@ async function getUserIdFromToken(db, token) {
       `).bind(tokenHash).first();
     return session?.user_id || null;
   } catch (error3) {
-    console.error("Token verification error:", error3);
+    console.warn("Token verification error (using defaults):", error3);
     return null;
   }
 }
 __name(getUserIdFromToken, "getUserIdFromToken");
 async function loadUserSettings(db, userId) {
   try {
+    if (userId === "guest-mode") {
+      return new Response(JSON.stringify({
+        success: true,
+        settings: null
+        // This will trigger default settings usage
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const tableExists = await checkTableExists(db, "user_settings");
+    if (!tableExists) {
+      console.log("user_settings table does not exist, returning default settings");
+      return new Response(JSON.stringify({
+        success: true,
+        settings: null
+        // This will trigger default settings usage
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     const userSettings = await db.prepare(`
         SELECT theme_preference, language, daily_goal_minutes, weekly_goal_minutes, 
                study_reminders, reminder_times, break_reminders, achievement_notifications,
@@ -2551,10 +2593,10 @@ async function loadUserSettings(db, userId) {
   } catch (error3) {
     console.error("Load settings error:", error3);
     return new Response(JSON.stringify({
-      success: false,
-      error: "Failed to load settings"
+      success: true,
+      settings: null,
+      warning: "Failed to load settings from database, using defaults"
     }), {
-      status: 500,
       headers: { "Content-Type": "application/json" }
     });
   }
@@ -2562,6 +2604,17 @@ async function loadUserSettings(db, userId) {
 __name(loadUserSettings, "loadUserSettings");
 async function saveUserSettings(db, userId, settings) {
   try {
+    const tableExists = await checkTableExists(db, "user_settings");
+    if (!tableExists) {
+      console.log("user_settings table does not exist, cannot save settings");
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Settings table not available - database needs migration"
+      }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     const existing = await db.prepare("SELECT user_id FROM user_settings WHERE user_id = ?").bind(userId).first();
     const settingsData = {
       theme_preference: settings.theme || "light",
@@ -2639,7 +2692,8 @@ async function saveUserSettings(db, userId, settings) {
     console.error("Save settings error:", error3);
     return new Response(JSON.stringify({
       success: false,
-      error: "Failed to save settings"
+      error: "Failed to save settings",
+      debug: error3 instanceof Error ? error3.message : "Unknown error"
     }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
@@ -2649,6 +2703,16 @@ async function saveUserSettings(db, userId, settings) {
 __name(saveUserSettings, "saveUserSettings");
 async function deleteUserSettings(db, userId) {
   try {
+    const tableExists = await checkTableExists(db, "user_settings");
+    if (!tableExists) {
+      console.log("user_settings table does not exist, cannot delete settings");
+      return new Response(JSON.stringify({
+        success: true,
+        message: "Settings table not available - no settings to delete"
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     await db.prepare("DELETE FROM user_settings WHERE user_id = ?").bind(userId).run();
     return new Response(JSON.stringify({
       success: true,
@@ -2660,7 +2724,8 @@ async function deleteUserSettings(db, userId) {
     console.error("Delete settings error:", error3);
     return new Response(JSON.stringify({
       success: false,
-      error: "Failed to delete settings"
+      error: "Failed to delete settings",
+      debug: error3 instanceof Error ? error3.message : "Unknown error"
     }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
@@ -2668,6 +2733,16 @@ async function deleteUserSettings(db, userId) {
   }
 }
 __name(deleteUserSettings, "deleteUserSettings");
+async function checkTableExists(db, tableName) {
+  try {
+    const result = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").bind(tableName).first();
+    return !!result;
+  } catch (error3) {
+    console.error(`Error checking if table ${tableName} exists:`, error3);
+    return false;
+  }
+}
+__name(checkTableExists, "checkTableExists");
 async function hashPassword3(password) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -3447,7 +3522,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env2, _ctx, middlewareCtx
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-vTTYLl/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-UTe84y/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -3479,7 +3554,7 @@ function __facade_invoke__(request, env2, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-vTTYLl/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-UTe84y/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

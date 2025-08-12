@@ -16,34 +16,17 @@ export default defineConfig({
     target: 'es2020',
     rollupOptions: {
       output: {
-        // Create separate chunks for better caching
+        // More conservative chunking for Cloudflare Pages
         manualChunks(id) {
-          // Vendor chunks
+          // Only create essential vendor chunks
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
-            if (id.includes('recharts') || id.includes('d3-')) {
-              return 'charts-vendor';
-            }
             return 'vendor';
           }
-          
-          // Feature-based chunks
-          if (id.includes('components/Analytics')) {
-            return 'analytics';
-          }
-          if (id.includes('components/Achievements') || id.includes('components/Gamification')) {
-            return 'gamification';
-          }
-          if (id.includes('services/')) {
-            return 'services';
-          }
-          if (id.includes('utils/')) {
-            return 'utils';
-          }
         },
-        // Add hash to filenames for cache busting
+        // Consistent file naming
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
         assetFileNames: 'assets/[name].[hash].[ext]'

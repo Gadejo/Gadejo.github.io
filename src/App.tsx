@@ -1,25 +1,22 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppData } from './hooks/useAppData';
 import { Dashboard } from './components/Dashboard';
-import { LazyLoader } from './components/LazyLoader';
+
 import { usePerformanceMonitor } from './hooks/usePerformanceMonitor';
 
-// Lazy load heavy components
-const Goals = lazy(() => import('./components/Goals').then(module => ({ default: module.Goals })));
-const EnhancedResources = lazy(() => import('./components/EnhancedResources').then(module => ({ default: module.EnhancedResources })));
-const EnhancedStats = lazy(() => import('./components/EnhancedStats').then(module => ({ default: module.EnhancedStats })));
-// import { Toast, Confetti } from './components/Toast';
+// Import critical components normally to avoid lazy loading issues
+import { Goals } from './components/Goals';
+import { EnhancedResources } from './components/EnhancedResources';
+import { EnhancedStats } from './components/EnhancedStats';
 import { EnhancedToast, EnhancedConfetti, XPNotification, AchievementNotification } from './components/EnhancedToast';
-// UserProfile now lazy loaded above
 import { PWASettings } from './components/PWASettings';
 import { useUnifiedGestures } from './hooks/useGestures';
 import { useAnimations } from './hooks/useAnimations';
 import { LevelingSystem } from './services/levelingSystem';
 import { AchievementEngine } from './services/achievementSystem';
-// Lazy load less critical components
-const ExportImport = lazy(() => import('./components/ExportImport').then(module => ({ default: module.ExportImport })));
-const TemplateManager = lazy(() => import('./components/TemplateManager').then(module => ({ default: module.TemplateManager })));
-const UserProfile = lazy(() => import('./components/UserProfile').then(module => ({ default: module.UserProfile })));
+import { ExportImport } from './components/ExportImport';
+import { TemplateManager } from './components/TemplateManager';
+import { UserProfile } from './components/UserProfile';
 
 // Keep critical components synchronous
 import AuthScreen from './components/AuthScreen';
@@ -585,8 +582,7 @@ function App() {
               </div>
             }>
               <div className="view-content entrance-slide-left" key="goals">
-                <LazyLoader minHeight="400px">
-                  <Goals
+                <Goals
                     subjects={data!.subjects}
                     goals={data!.goals}
                     sessions={data!.sessions}
@@ -614,7 +610,6 @@ function App() {
                     onShowToast={showToast}
                     onShowConfetti={showConfetti}
                   />
-                </LazyLoader>
               </div>
             </ErrorBoundary>
           )}
@@ -627,12 +622,10 @@ function App() {
               </div>
             }>
               <div className="view-content entrance-slide-up" key="resources">
-                <LazyLoader minHeight="400px">
-                  <EnhancedResources
+                <EnhancedResources
                     subjects={data!.subjects}
                     onShowToast={showToast}
                   />
-                </LazyLoader>
               </div>
             </ErrorBoundary>
           )}
@@ -645,12 +638,10 @@ function App() {
               </div>
             }>
               <div className="view-content entrance-zoom" key="stats">
-                <LazyLoader minHeight="400px">
-                  <EnhancedStats
+                <EnhancedStats
                     subjects={data!.subjects}
                     sessions={data!.sessions}
                   />
-                </LazyLoader>
               </div>
             </ErrorBoundary>
           )}
@@ -663,13 +654,11 @@ function App() {
               </div>
             }>
               <div className="view-content entrance-slide-right" key="settings">
-                <LazyLoader minHeight="300px">
-                  <ExportImport
+                <ExportImport
                     data={data}
                     onImport={setData}
                     onShowToast={showToast}
                   />
-                </LazyLoader>
               </div>
             </ErrorBoundary>
           )}
@@ -726,30 +715,26 @@ function App() {
       />
 
       {showTemplateManager && (
-        <Suspense fallback={null}>
-          <TemplateManager
-            isOpen={showTemplateManager}
-            onClose={() => setShowTemplateManager(false)}
-            onApplyTemplate={handleApplyTemplate}
-            onShowToast={showToast}
-          />
-        </Suspense>
+        <TemplateManager
+          isOpen={showTemplateManager}
+          onClose={() => setShowTemplateManager(false)}
+          onApplyTemplate={handleApplyTemplate}
+          onShowToast={showToast}
+        />
       )}
       
       {showUserProfile && (
-        <Suspense fallback={null}>
-          <UserProfile
-            subjects={data!.subjects}
-            sessions={data!.sessions}
-            isOpen={showUserProfile}
-            onClose={() => setShowUserProfile(false)}
-            onShowToast={showEnhancedToast}
-            onXPUpdate={(newXP) => {
-              // In a real implementation, you'd update the subject XP in the backend
-              console.log('XP updated:', newXP);
-            }}
-          />
-        </Suspense>
+        <UserProfile
+          subjects={data!.subjects}
+          sessions={data!.sessions}
+          isOpen={showUserProfile}
+          onClose={() => setShowUserProfile(false)}
+          onShowToast={showEnhancedToast}
+          onXPUpdate={(newXP) => {
+            // In a real implementation, you'd update the subject XP in the backend
+            console.log('XP updated:', newXP);
+          }}
+        />
       )}
       
       <PWASettings
