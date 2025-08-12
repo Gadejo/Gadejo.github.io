@@ -101,15 +101,20 @@ class SettingsService {
       // Save to localStorage first (immediate)
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedSettings));
 
-      // If authenticated, save to database
-      if (authService.isAuthenticated()) {
-        await this.saveToDatabase(updatedSettings);
-      }
-
-      // Notify listeners
+      // Notify listeners immediately so UI updates
       this.notifyListeners(updatedSettings);
+
+      // If authenticated, try to save to database (don't block on this)
+      if (authService.isAuthenticated()) {
+        try {
+          await this.saveToDatabase(updatedSettings);
+        } catch (dbError) {
+          console.warn('Database save failed (settings saved locally):', dbError);
+          // Don't throw - settings are still saved locally and UI is updated
+        }
+      }
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      console.error('Failed to save settings locally:', error);
       throw error;
     }
   }
@@ -252,9 +257,14 @@ class SettingsService {
     }
 
     try {
-      // Check if we're in development mode and skip API call
-      if (import.meta.env?.DEV) {
-        console.log('Development mode: using default settings');
+      // Check if we're in development mode (localhost or specific dev domains)
+      const isDevMode = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.port === '5173' ||
+                       window.location.port === '8788';
+      
+      if (isDevMode) {
+        console.log('Development mode detected: using default settings');
         return null;
       }
 
@@ -267,21 +277,26 @@ class SettingsService {
         })
       });
 
-      // If response is not ok, return null instead of trying to parse JSON
+      // Handle different response scenarios gracefully
       if (!response.ok) {
-        console.warn(`Settings API returned ${response.status}: ${response.statusText}`);
+        if (response.status === 401) {
+          console.log('Not authenticated - using default settings');
+        } else {
+          console.warn(`Settings API returned ${response.status}: ${response.statusText}`);
+        }
         return null;
       }
 
       const result = await response.json();
       
-      if (result.success && result.settings) {
-        return result.settings;
+      if (result.success) {
+        return result.settings; // This could be null, which is fine
       }
       
+      console.warn('Settings API returned unsuccessful result:', result);
       return null;
     } catch (error) {
-      console.error('Failed to load settings from database:', error);
+      console.warn('Failed to load settings from database (using defaults):', error);
       return null;
     }
   }
@@ -291,8 +306,13 @@ class SettingsService {
     if (!token) throw new Error('Authentication required');
 
     // Skip API call in development mode
-    if (import.meta.env?.DEV) {
-      console.log('Development mode: skipping settings save to database');
+    const isDevMode = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' || 
+                     window.location.port === '5173' ||
+                     window.location.port === '8788';
+    
+    if (isDevMode) {
+      console.log('Development mode detected: skipping settings save to database');
       return;
     }
 
@@ -306,10 +326,19 @@ class SettingsService {
       })
     });
 
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.log('Not authenticated - settings saved locally only');
+        return; // Don't throw error, just skip database save
+      }
+      throw new Error(`Settings API error: ${response.status} ${response.statusText}`);
+    }
+    
     const result = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to save settings to database');
+      console.warn('Settings save failed:', result.error);
+      // Don't throw error, just log warning - settings are still saved locally
     }
   }
 

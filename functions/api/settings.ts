@@ -15,6 +15,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const db = env.DB;
     
     if (!token) {
+      // For load operations, return default settings instead of error
+      if (action === 'load') {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          settings: null // This will trigger default settings usage
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Authentication token required' 
