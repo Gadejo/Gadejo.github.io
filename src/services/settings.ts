@@ -162,7 +162,15 @@ class SettingsService {
       effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
 
+    // Apply both data-theme attribute and class for compatibility
     document.documentElement.setAttribute('data-theme', effectiveTheme);
+    
+    // Also apply/remove 'dark' class for Tailwind compatibility
+    if (effectiveTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     
     // Update meta theme-color for mobile browsers
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
