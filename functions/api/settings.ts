@@ -14,9 +14,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const { action, token, settings } = body;
     const db = env.DB;
     
-    if (!token) {
-      // For load operations, return default settings instead of error
-      if (action === 'load') {
+    // Always allow load operations without authentication (return defaults)
+    if (action === 'load') {
+      if (!token) {
         return new Response(JSON.stringify({ 
           success: true, 
           settings: null // This will trigger default settings usage
@@ -26,6 +26,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
       }
       
+      // Try to get user settings, but don't fail if token is invalid
+      try {
+        const userId = await getUserIdFromToken(db, token);
+        if (userId) {
+          return await loadUserSettings(db, userId);
+        }
+      } catch (error) {
+        console.warn('Failed to load user settings, using defaults:', error);
+      }
+      
+      // Fall back to default settings if token verification fails
+      return new Response(JSON.stringify({ 
+        success: true, 
+        settings: null
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // For save/delete operations, require authentication
+    if (!token) {
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Authentication token required' 
@@ -38,17 +60,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Verify token and get user ID
     const userId = await getUserIdFromToken(db, token);
     if (!userId) {
-      // For load operations, return default settings instead of error
-      if (action === 'load') {
-        return new Response(JSON.stringify({ 
-          success: true, 
-          settings: null // This will trigger default settings usage
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Invalid or expired token' 
@@ -101,6 +112,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
 async function getUserIdFromToken(db: D1Database, token: string): Promise<string | null> {
   try {
+    // Handle guest tokens
+    if (token === 'guest-token') {
+      return 'guest-mode';
+    }
+    
     const tokenHash = await hashPassword(token);
     
     const session = await db
@@ -115,13 +131,23 @@ async function getUserIdFromToken(db: D1Database, token: string): Promise<string
       
     return session?.user_id || null;
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.warn('Token verification error (using defaults):', error);
     return null;
   }
 }
 
 async function loadUserSettings(db: D1Database, userId: string) {
   try {
+    // Handle guest mode
+    if (userId === 'guest-mode') {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        settings: null // This will trigger default settings usage
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     const userSettings = await db
       .prepare(`
         SELECT theme_preference, language, daily_goal_minutes, weekly_goal_minutes, 
