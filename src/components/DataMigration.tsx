@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { migrateLocalStorageToD1, hasLocalStorageData } from '../utils/storage';
+import { hasLocalStorageData, markMigrationCompleted, skipMigration } from '../utils/storage';
 import { databaseService } from '../services/database';
 
 interface DataMigrationProps {
@@ -27,9 +27,25 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
         throw new Error(`Diagnostics failed: ${JSON.stringify(diagnostics)}`);
       }
       
-      // Proceed with actual migration
-      console.log('Running full migration...');
-      await migrateLocalStorageToD1();
+      // Use the working step-by-step migration instead
+      console.log('Running step-by-step migration (full version)...');
+      const localAppData = JSON.parse(localStorage.getItem('modular-learning-rpg') || '{}');
+      const localTemplates = JSON.parse(localStorage.getItem('user-templates') || '[]');
+      
+      const stepResult = await databaseService.stepByStepMigration({
+        appData: localAppData,
+        userTemplates: localTemplates
+      });
+      
+      if (!stepResult.success) {
+        throw new Error(`Migration failed at: ${stepResult.failed_at} - ${stepResult.error}`);
+      }
+      
+      console.log('Step-by-step migration completed successfully');
+      
+      // Mark migration as completed so it won't show again
+      markMigrationCompleted();
+      
       setSuccess(true);
       setTimeout(() => {
         onMigrationComplete();
@@ -49,6 +65,10 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
     try {
       // Ensure user exists in database before proceeding
       await databaseService.ensureUserExists();
+      
+      // Mark migration as skipped so it won't show again
+      skipMigration();
+      
       onMigrationComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to set up user account');
@@ -57,7 +77,8 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
   };
 
   if (!hasExistingData) {
-    // No data to migrate, proceed directly
+    // No data to migrate, mark as completed and proceed directly
+    markMigrationCompleted();
     setTimeout(onMigrationComplete, 0);
     return null;
   }
@@ -104,7 +125,27 @@ export default function DataMigration({ onMigrationComplete }: DataMigrationProp
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800 text-sm">{error}</p>
+            <div className="flex justify-between items-start">
+              <p className="text-red-800 text-sm">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-500 hover:text-red-700 ml-2"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-2">
+              <button
+                onClick={() => {
+                  // Clear all localStorage and try again
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="text-xs text-red-600 underline hover:text-red-800"
+              >
+                Clear all data and start fresh
+              </button>
+            </div>
           </div>
         )}
 

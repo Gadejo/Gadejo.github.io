@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx wrangler pages dev:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(npx wrangler pages deploy:*)",
+      "Bash(npx wrangler pages project:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:0dccb009.gadejo-github-io.pages.dev)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

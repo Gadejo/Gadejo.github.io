@@ -6,12 +6,11 @@ interface AuthScreenProps {
   onLogin: (showMigration: boolean) => void;
 }
 
-type AuthMode = 'select' | 'login' | 'register' | 'switch';
+type AuthMode = 'select' | 'login' | 'register';
 
 export default function AuthScreen({ onLogin }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>('select');
   const [availableUsers, setAvailableUsers] = useState<PublicUser[]>([]);
-  const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -53,7 +52,6 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 
     try {
       await authService.login(loginData);
-      // Check if this is a returning user with existing data
       const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
       onLogin(shouldShowMigration);
     } catch (err: any) {
@@ -80,7 +78,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 
     try {
       await authService.register(registerData);
-      onLogin(false); // New users don't need migration
+      const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
+      onLogin(shouldShowMigration);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -88,121 +87,162 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     }
   };
 
-  const handleUserSelect = (user: PublicUser) => {
-    setSelectedUser(user);
+  const handleUserSelect = async (user: PublicUser) => {
     setLoginData({ email: user.email, password: '' });
     setMode('login');
   };
 
-  const handleSwitchUser = async () => {
-    if (!loginData.email || !loginData.password) {
-      setError('Email and password are required');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await authService.switchUser(loginData);
-      const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
-      onLogin(shouldShowMigration);
-    } catch (err: any) {
-      setError(err.message || 'Switch user failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatStudyTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
-
   if (mode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-2xl">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
+          {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-4xl mb-4">🧠</div>
+            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">🧠</span>
+            </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
               ADHD Learning RPG
             </h1>
-            <p className="text-gray-600">
-              Choose your learner or create a new account
+            <p className="text-gray-600 text-sm">
+              Transform your learning into an adventure
             </p>
           </div>
 
+          {/* Available Users */}
           {availableUsers.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">Available Learners</h2>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-700 mb-4 text-center">Choose Your Character</h2>
+              <div className="space-y-3 max-h-48 overflow-y-auto">
                 {availableUsers.map((user) => (
-                  <div
+                  <button
                     key={user.id}
                     onClick={() => handleUserSelect(user)}
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors"
+                    className="w-full flex items-center p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 rounded-xl transition-all duration-200 group"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        user.displayName.charAt(0).toUpperCase()
-                      )}
+                    <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 group-hover:scale-110 transition-transform duration-200">
+                      {user.displayName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{user.displayName}</h3>
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-gray-900">{user.displayName}</p>
                       <p className="text-sm text-gray-500">{user.email}</p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-xs text-blue-600">
-                          📚 {formatStudyTime(user.totalStudyTime)}
+                      <div className="flex items-center space-x-3 mt-1">
+                        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                          🔥 {user.currentStreak} streak
                         </span>
-                        <span className="text-xs text-green-600">
-                          🔥 {user.currentStreak} day streak
-                        </span>
-                        <span className="text-xs text-purple-600">
-                          ⭐ {user.totalSessions} sessions
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                          Level 1
                         </span>
                       </div>
                     </div>
-                    <div className="text-blue-600">
+                    <div className="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="space-y-3">
             <button
               onClick={() => setMode('register')}
-              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              ➕ Create New Account
+              ✨ Create New Character
             </button>
             
             {availableUsers.length > 0 && (
               <button
-                onClick={() => setMode('switch')}
-                className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                onClick={() => setMode('login')}
+                className="w-full bg-white text-gray-700 py-3 px-6 rounded-xl font-medium border border-gray-300 hover:bg-gray-50 transform hover:scale-105 transition-all duration-200"
               >
-                🔄 Switch User
+                🔐 Login with Email
               </button>
             )}
           </div>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">
-              🔒 Private accounts • Each user has their own progress • Secure & encrypted
+  if (mode === 'login') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">🔐</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Welcome Back!
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Enter your credentials to continue your journey
             </p>
           </div>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                value={loginData.email}
+                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+                placeholder="Enter your email"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <input
+                type="password"
+                value={loginData.password}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+                placeholder="Enter your password"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-800 text-sm text-center">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Logging in...</span>
+                </div>
+              ) : (
+                '🚀 Launch Adventure'
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode('select')}
+              className="w-full text-gray-600 py-2 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200"
+            >
+              ← Back to Character Select
+            </button>
+          </form>
         </div>
       </div>
     );
@@ -210,190 +250,98 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 
   if (mode === 'register') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
+          {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-4xl mb-4">🌟</div>
+            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">✨</span>
+            </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Create Your Account
+              Create Your Character
             </h1>
-            <p className="text-gray-600">
-              Start your personalized learning journey
+            <p className="text-gray-600 text-sm">
+              Start your personalized learning adventure
             </p>
           </div>
 
+          {/* Form */}
           <form onSubmit={handleRegister} className="space-y-6">
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
-                Display Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Character Name</label>
               <input
                 type="text"
-                id="displayName"
                 value={registerData.displayName}
                 onChange={(e) => setRegisterData({ ...registerData, displayName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="How should we call you?"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+                placeholder="Choose your character name"
                 disabled={isLoading}
-                autoFocus
+                required
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
-                id="email"
                 value={registerData.email}
                 onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your@email.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+                placeholder="Enter your email"
                 disabled={isLoading}
+                required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
-                id="password"
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="At least 6 characters"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+                placeholder="Create a strong password (6+ chars)"
                 disabled={isLoading}
+                minLength={6}
+                required
               />
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-800 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-800 text-sm text-center">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating Account...
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Creating character...</span>
                 </div>
               ) : (
-                'Create Account'
+                '🎮 Begin Adventure'
               )}
             </button>
-          </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setMode('select')}
-              className="text-gray-600 hover:text-gray-800 text-sm"
-            >
-              ← Back to user selection
-            </button>
-          </div>
+            {availableUsers.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMode('select')}
+                className="w-full text-gray-600 py-2 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200"
+              >
+                ← Back to Character Select
+              </button>
+            )}
+          </form>
         </div>
       </div>
     );
   }
 
-  // Login mode (and switch mode use same form)
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-4">🔐</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            {mode === 'switch' ? 'Switch User' : 'Welcome Back'}
-          </h1>
-          {selectedUser && (
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                {selectedUser.avatarUrl ? (
-                  <img src={selectedUser.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  selectedUser.displayName.charAt(0).toUpperCase()
-                )}
-              </div>
-              <span className="font-medium text-gray-700">{selectedUser.displayName}</span>
-            </div>
-          )}
-          <p className="text-gray-600">
-            Enter your password to continue
-          </p>
-        </div>
-
-        <form onSubmit={mode === 'switch' ? handleSwitchUser : handleLogin} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={loginData.email}
-              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="your@email.com"
-              disabled={isLoading || !!selectedUser}
-              autoFocus={!selectedUser}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={loginData.password}
-              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your password"
-              disabled={isLoading}
-              autoFocus={!!selectedUser}
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || !loginData.email || !loginData.password}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                {mode === 'switch' ? 'Switching...' : 'Signing in...'}
-              </div>
-            ) : (
-              mode === 'switch' ? 'Switch User' : 'Sign In'
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setMode('select')}
-            className="text-gray-600 hover:text-gray-800 text-sm"
-          >
-            ← Back to user selection
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }

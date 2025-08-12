@@ -1,6 +1,25 @@
 // TypeScript types for Cloudflare Functions
 export interface Env {
+  // Database
   DB: D1Database;
+  
+  // KV Namespaces
+  SESSIONS: KVNamespace;
+  CACHE: KVNamespace;
+  RATE_LIMIT: KVNamespace;
+  
+  // Environment Variables
+  NODE_ENV: string;
+  API_BASE_URL: string;
+  ENVIRONMENT: string;
+  DEBUG_MODE: string;
+  RATE_LIMIT_REQUESTS: string;
+  RATE_LIMIT_WINDOW: string;
+  SESSION_DURATION: string;
+  MAX_UPLOAD_SIZE: string;
+  APP_NAME: string;
+  APP_VERSION: string;
+  SUPPORT_EMAIL: string;
 }
 
 // D1 Database types (simplified)

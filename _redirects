@@ -1,0 +1,7 @@
+# Cloudflare Pages Redirects Configuration
+# Optimized for ADHD Learning RPG SPA
+
+# SPA fallback - redirect all non-file requests to index.html
+/*    /index.html   200
+
+# API redirects are handled by functions, so no redirects needed for /api/*

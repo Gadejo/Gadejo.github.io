@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { SubjectCard } from './SubjectCard';
 import { QuestTimer } from './QuestTimer';
 import { SubjectCreator } from './SubjectCreator';
+import { useAnimations } from '../hooks/useAnimations';
+import { useUnifiedGestures } from '../hooks/useGestures';
+import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 import type { SubjectData, Session } from '../types';
 
 interface DashboardProps {
@@ -23,10 +26,54 @@ export function Dashboard({
 }: DashboardProps) {
   const [activeQuest, setActiveQuest] = useState<SubjectData | null>(null);
   const [showCreator, setShowCreator] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  
+  // Performance monitoring
+  usePerformanceMonitor({
+    componentName: 'Dashboard',
+    logThreshold: 16
+  });
+  
+  // Animation hooks for enhanced interactions
+  const { staggeredEntrance, bounce, pulse } = useAnimations();
+  
+  // Gesture support for card interactions
+  const { attachUnifiedGestures } = useUnifiedGestures({
+    onDoubleTap: () => {
+      setShowCreator(true);
+    },
+    onLongPress: () => {
+      // Could open settings or quick actions menu
+      console.log('Long press detected on dashboard');
+    }
+  });
+  
+  // Attach gestures and apply entrance animations
+  useEffect(() => {
+    if (dashboardRef.current) {
+      const cleanup = attachUnifiedGestures(dashboardRef.current);
+      
+      // Apply staggered entrance animation to subject cards
+      const cards = dashboardRef.current.querySelectorAll('.subject-card');
+      if (cards.length > 0) {
+        staggeredEntrance(Array.from(cards) as HTMLElement[], 'slideUp', 150);
+      }
+      
+      return cleanup;
+    }
+  }, [attachUnifiedGestures, staggeredEntrance, Object.keys(subjects).length]);
 
 
   const handleStartQuest = (subjectData: SubjectData) => {
     setActiveQuest(subjectData);
+    
+    // Add subtle animation feedback
+    const questCards = dashboardRef.current?.querySelectorAll('.subject-card');
+    questCards?.forEach((card) => {
+      if (card instanceof HTMLElement) {
+        pulse(card, { duration: 300 });
+      }
+    });
   };
 
   const handleQuickAdd = (subjectId: string, minutes: number) => {
@@ -43,6 +90,12 @@ export function Dashboard({
     };
 
     onAddSession(session);
+    
+    // Add bounce animation to the subject card
+    const subjectCard = dashboardRef.current?.querySelector(`[data-subject-id="${subjectId}"]`);
+    if (subjectCard instanceof HTMLElement) {
+      bounce(subjectCard, { duration: 500 });
+    }
   };
 
   const handleManualAdd = (subjectId: string, minutes: number, questType: string, notes: string) => {
@@ -99,8 +152,8 @@ export function Dashboard({
 
   return (
     <>
-      <div className="container">
-        <div className="dashboard-header" style={{ 
+      <div ref={dashboardRef} className="container touch-friendly">
+        <div className="dashboard-header hover-lift" style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
@@ -108,28 +161,33 @@ export function Dashboard({
         }}>
           <h2 style={{ margin: 0 }}>Your Learning Journey</h2>
           <button 
-            className="btn"
+            className="btn btn-primary hover-scale touch-feedback animate-button-press"
             onClick={() => setShowCreator(true)}
           >
             ➕ Add Subject
           </button>
         </div>
 
-        <div className="grid">
+        <div className="grid animate-stagger-children">
           {subjectArray.map((subjectData, index) => (
-            <SubjectCard
+            <div 
               key={subjectData.config.id}
-              subjectData={subjectData}
-              todayMinutes={todayMinutes[subjectData.config.id] || 0}
+              className="subject-card-wrapper hover-lift"
+              data-subject-id={subjectData.config.id}
+            >
+              <SubjectCard
+                subjectData={subjectData}
+                todayMinutes={todayMinutes[subjectData.config.id] || 0}
               pipCount={pipCounts[subjectData.config.id] || 0}
               onStartQuest={() => handleStartQuest(subjectData)}
               onQuickAdd={(minutes) => handleQuickAdd(subjectData.config.id, minutes)}
               onManualAdd={(minutes, questType, notes) => 
                 handleManualAdd(subjectData.config.id, minutes, questType, notes)
               }
-              onPipClick={() => onPipClick(subjectData.config.id)}
-              animationDelay={index * 100}
-            />
+                onPipClick={() => onPipClick(subjectData.config.id)}
+                animationDelay={index * 100}
+              />
+            </div>
           ))}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { authService } from '../services/auth';
 
 const STORAGE_KEY = 'modular-learning-rpg';
 const TEMPLATES_KEY = 'user-templates';
+const MIGRATION_COMPLETED_KEY = 'migration-completed-v4';
 
 function createDefaultSubjectData(config: SubjectConfig): SubjectData {
   return {
@@ -116,6 +117,8 @@ export async function migrateLocalStorageToD1(): Promise<void> {
       userTemplates: localTemplates
     });
     
+    // Mark migration as completed
+    localStorage.setItem(MIGRATION_COMPLETED_KEY, 'true');
     console.log('Successfully migrated data to D1 database');
   } catch (error) {
     console.error('Migration failed:', error);
@@ -125,9 +128,47 @@ export async function migrateLocalStorageToD1(): Promise<void> {
 
 // Check if there's localStorage data that needs migration
 export function hasLocalStorageData(): boolean {
+  // If migration was already completed, don't show migration again
+  if (localStorage.getItem(MIGRATION_COMPLETED_KEY) === 'true') {
+    return false;
+  }
+
   const appData = localStorage.getItem(STORAGE_KEY);
   const templates = localStorage.getItem(TEMPLATES_KEY);
-  return !!(appData || templates);
+  
+  // Only show migration if there's actual meaningful data
+  if (appData) {
+    try {
+      const parsed = JSON.parse(appData);
+      // Check if there's actual user data (sessions, custom subjects, etc.)
+      const hasRealData = (
+        (parsed.sessions && parsed.sessions.length > 0) ||
+        (parsed.goals && parsed.goals.length > 0) ||
+        Object.keys(parsed.pips || {}).length > 0 ||
+        Object.keys(parsed.subjects || {}).length > defaultSubjects.length
+      );
+      return hasRealData;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  return !!(templates && templates !== '[]');
+}
+
+// Mark migration as completed (call this after successful migration)
+export function markMigrationCompleted(): void {
+  localStorage.setItem(MIGRATION_COMPLETED_KEY, 'true');
+}
+
+// Reset migration status (useful for testing)
+export function resetMigrationStatus(): void {
+  localStorage.removeItem(MIGRATION_COMPLETED_KEY);
+}
+
+// Skip migration (if user chooses to start fresh)
+export function skipMigration(): void {
+  localStorage.setItem(MIGRATION_COMPLETED_KEY, 'true');
 }
 
 export function exportAppData(data: AppData): Blob {

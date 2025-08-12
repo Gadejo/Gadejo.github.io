@@ -752,26 +752,112 @@ async function stepByStepMigration(db: D1Database, userId: string, localStorageD
     steps.step4_save_app_data = true;
     console.log('✓ saveAppData works');
 
-    // Step 5: Test session saving
-    console.log('Step 5: Testing session saving...');
-    if (appData.sessions && Array.isArray(appData.sessions) && appData.sessions.length > 0) {
-      const testSession = appData.sessions[0];
-      await db.prepare(`
-        INSERT INTO sessions (id, user_id, subject_id, duration, date, notes, quest_type, xp_earned)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        testSession.id || 'test-session',
-        userId,
-        testSession.subjectId || '',
-        testSession.duration || 0,
-        testSession.date || new Date().toISOString(),
-        testSession.notes || '',
-        testSession.questType || 'study',
-        testSession.xpEarned || 0
-      ).run();
+    // Step 5: Save all sessions
+    console.log('Step 5: Saving all sessions...');
+    const batchOps = [];
+    
+    if (appData.sessions && Array.isArray(appData.sessions)) {
+      const sessionOps = appData.sessions.map((session: any) => 
+        db.prepare(`
+          INSERT INTO sessions (id, user_id, subject_id, duration, date, notes, quest_type, xp_earned)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          session.id || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId,
+          session.subjectId || '',
+          session.duration || 0,
+          session.date || new Date().toISOString(),
+          session.notes || '',
+          session.questType || 'study',
+          session.xpEarned || 0
+        )
+      );
+      batchOps.push(...sessionOps);
     }
     steps.step5_save_sessions = true;
-    console.log('✓ Session saving works');
+    console.log(`✓ Prepared ${batchOps.length} session operations`);
+
+    // Step 6: Save all goals
+    console.log('Step 6: Saving all goals...');
+    if (appData.goals && Array.isArray(appData.goals)) {
+      const goalOps = appData.goals.map((goal: any) =>
+        db.prepare(`
+          INSERT INTO goals (id, user_id, title, subject_id, type, target, start_date, due_date, priority, done)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          goal.id || `goal-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId,
+          goal.title || 'Untitled Goal',
+          goal.subjectId || '',
+          goal.type || 'minutes',
+          goal.target || 0,
+          goal.startDate || new Date().toISOString(),
+          goal.dueDate || null,
+          goal.priority || 'medium',
+          goal.done ? 1 : 0
+        )
+      );
+      batchOps.push(...goalOps);
+    }
+    steps.step6_save_goals = true;
+    console.log(`✓ Prepared ${appData.goals?.length || 0} goal operations`);
+
+    // Step 7: Save pips
+    console.log('Step 7: Saving pips...');
+    if (appData.pips && typeof appData.pips === 'object') {
+      for (const [date, subjectPips] of Object.entries(appData.pips as Record<string, any>)) {
+        if (subjectPips && typeof subjectPips === 'object') {
+          for (const [subjectId, count] of Object.entries(subjectPips)) {
+            if (typeof count === 'number' && count > 0) {
+              batchOps.push(
+                db.prepare(`
+                  INSERT INTO pips (user_id, date, subject_id, count)
+                  VALUES (?, ?, ?, ?)
+                `).bind(userId, date, subjectId, count)
+              );
+            }
+          }
+        }
+      }
+    }
+    steps.step7_save_pips = true;
+    console.log('✓ Prepared pip operations');
+
+    // Step 8: Save templates
+    console.log('Step 8: Saving templates...');
+    if (userTemplates && Array.isArray(userTemplates)) {
+      const templateOps = userTemplates.map((template: any) =>
+        db.prepare(`
+          INSERT INTO user_templates (id, user_id, name, description, category, author, version, subjects, default_goals)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          template.id || `template-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          userId,
+          template.name || 'Untitled Template',
+          template.description || '',
+          template.category || 'custom',
+          template.author || 'User',
+          template.version || '1.0.0',
+          JSON.stringify(template.subjects || []),
+          JSON.stringify(template.defaultGoals || [])
+        )
+      );
+      batchOps.push(...templateOps);
+    }
+    steps.step8_save_templates = true;
+    console.log(`✓ Prepared ${userTemplates.length} template operations`);
+
+    // Execute all operations in batches
+    console.log(`Executing ${batchOps.length} total operations in batches...`);
+    if (batchOps.length > 0) {
+      const batchSize = 25;
+      for (let i = 0; i < batchOps.length; i += batchSize) {
+        const batch = batchOps.slice(i, i + batchSize);
+        console.log(`Executing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(batchOps.length/batchSize)} (${batch.length} ops)`);
+        await db.batch(batch);
+      }
+    }
+    console.log('✓ All operations completed successfully');
 
     return new Response(JSON.stringify({
       success: true,
