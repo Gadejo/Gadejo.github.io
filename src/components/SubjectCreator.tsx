@@ -68,6 +68,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
           <label>Subject Name *</label>
           <input
             type="text"
+            id="subject-name"
+            name="name"
             placeholder="e.g., Guitar Practice"
             value={config.name || ''}
             onChange={(e) => setConfig(prev => ({ ...prev, name: e.target.value }))}
@@ -117,6 +119,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
         {(config.questTypes || defaultQuestTypes).map((quest, index) => (
           <div key={index} className="quest-item">
             <input
+              id={`quest-name-${index}`}
+              name={`questName${index}`}
               placeholder="Name (e.g., Practice)"
               value={quest.name}
               onChange={(e) => {
@@ -127,6 +131,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
             />
             <input
               type="number"
+              id={`quest-duration-${index}`}
+              name={`questDuration${index}`}
               placeholder="Duration (min)"
               value={quest.duration}
               onChange={(e) => {
@@ -137,6 +143,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
             />
             <input
               type="number"
+              id={`quest-xp-${index}`}
+              name={`questXp${index}`}
               placeholder="XP"
               value={quest.xp}
               onChange={(e) => {
@@ -146,6 +154,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
               }}
             />
             <input
+              id={`quest-emoji-${index}`}
+              name={`questEmoji${index}`}
               placeholder="Emoji"
               value={quest.emoji}
               onChange={(e) => {
@@ -168,6 +178,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
         {(config.achievements || defaultAchievements).map((achievement, index) => (
           <div key={index} className="achievement-item">
             <input
+              id={`achievement-name-${index}`}
+              name={`achievementName${index}`}
               placeholder="Achievement Name"
               value={achievement.name}
               onChange={(e) => {
@@ -178,6 +190,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
             />
             <input
               type="number"
+              id={`achievement-streak-${index}`}
+              name={`achievementStreak${index}`}
               placeholder="Days Required"
               value={achievement.streakRequired}
               onChange={(e) => {
@@ -187,6 +201,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
               }}
             />
             <input
+              id={`achievement-emoji-${index}`}
+              name={`achievementEmoji${index}`}
               placeholder="Emoji"
               value={achievement.emoji}
               onChange={(e) => {
@@ -209,6 +225,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
           <label>Daily Pip Amount (minutes)</label>
           <input
             type="number"
+            id="pip-amount"
+            name="pipAmount"
             min="1"
             value={config.pipAmount || 5}
             onChange={(e) => setConfig(prev => ({ ...prev, pipAmount: parseInt(e.target.value) || 5 }))}
@@ -220,6 +238,8 @@ export function SubjectCreator({ isOpen, onClose, onSave }: SubjectCreatorProps)
           <label>Target Hours</label>
           <input
             type="number"
+            id="target-hours"
+            name="targetHours"
             min="1"
             value={config.targetHours || 8}
             onChange={(e) => setConfig(prev => ({ ...prev, targetHours: parseInt(e.target.value) || 8 }))}

@@ -258,6 +258,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
             <span className="search-icon">🔍</span>
             <input
               type="search"
+              id="resource-search"
+              name="search"
               placeholder="Search resources, domains, or subjects..."
               value={filters.search}
               onChange={(e) => handleFilterChange({ ...filters, search: e.target.value })}
@@ -267,6 +269,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
 
         <div className="filter-section">
           <select
+            id="resource-subject-filter"
+            name="subjectFilter"
             value={filters.subject}
             onChange={(e) => setFilters(prev => ({ ...prev, subject: e.target.value }))}
           >
@@ -279,6 +283,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
           </select>
 
           <select
+            id="resource-category-filter"
+            name="categoryFilter"
             value={filters.category}
             onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
           >
@@ -291,6 +297,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
           </select>
 
           <select
+            id="resource-priority-filter"
+            name="priorityFilter"
             value={filters.priority}
             onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
           >
@@ -301,6 +309,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
           </select>
 
           <select
+            id="resource-sort"
+            name="sortBy"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
           >
@@ -359,6 +369,8 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
             className="" 
           >
             <select 
+              id="items-per-page"
+              name="itemsPerPage"
               value={itemsPerPage} 
               onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
               className="items-per-page"

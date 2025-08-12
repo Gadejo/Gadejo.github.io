@@ -225,6 +225,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
+                id="login-email"
+                name="email"
                 value={loginData.email}
                 onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
@@ -238,6 +240,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
+                id="login-password"
+                name="password"
                 value={loginData.password}
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
@@ -304,6 +308,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">Character Name</label>
               <input
                 type="text"
+                id="register-displayName"
+                name="displayName"
                 value={registerData.displayName}
                 onChange={(e) => setRegisterData({ ...registerData, displayName: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
@@ -317,6 +323,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
+                id="register-email"
+                name="email"
                 value={registerData.email}
                 onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
@@ -330,6 +338,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
+                id="register-password"
+                name="password"
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"

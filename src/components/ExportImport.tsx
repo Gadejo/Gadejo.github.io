@@ -136,6 +136,8 @@ export function ExportImport({ data, onImport, onShowToast }: ExportImportProps)
 
       <input
         ref={fileInputRef}
+        id="file-import"
+        name="fileImport"
         type="file"
         accept=".json,application/json"
         onChange={handleImportFile}

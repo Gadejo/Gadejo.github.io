@@ -132,6 +132,8 @@ export function SubjectCard({
           <form className="manual" onSubmit={handleManualSubmit}>
             <input
               type="number"
+              id={`manual-minutes-${config.id}`}
+              name="manualMinutes"
               min="1"
               placeholder="Minutes"
               value={manualMinutes}
@@ -139,6 +141,8 @@ export function SubjectCard({
               required
             />
             <select 
+              id={`manual-quest-type-${config.id}`}
+              name="manualQuestType"
               value={manualQuestType}
               onChange={(e) => setManualQuestType(e.target.value)}
             >
@@ -150,6 +154,8 @@ export function SubjectCard({
             </select>
             <input
               type="text"
+              id={`manual-notes-${config.id}`}
+              name="manualNotes"
               placeholder="Notes (optional)"
               value={manualNotes}
               onChange={(e) => setManualNotes(e.target.value)}

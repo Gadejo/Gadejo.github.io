@@ -149,6 +149,7 @@ export function Goals({
           <form onSubmit={handleSubmitGoal}>
             <div className="goal-form-grid">
               <input
+                id="goal-title"
                 name="title"
                 type="text"
                 placeholder="Goal (e.g., 30m vocab)"
@@ -158,6 +159,7 @@ export function Goals({
               />
               
               <select 
+                id="goal-subject"
                 name="subject"
                 value={newGoal.subjectId}
                 onChange={(e) => setNewGoal(prev => ({ ...prev, subjectId: e.target.value }))}
@@ -170,6 +172,7 @@ export function Goals({
               </select>
               
               <select 
+                id="goal-type"
                 name="type"
                 value={newGoal.type}
                 onChange={(e) => setNewGoal(prev => ({ ...prev, type: e.target.value as 'minutes' | 'sessions' }))}
@@ -179,6 +182,7 @@ export function Goals({
               </select>
               
               <input
+                id="goal-target"
                 name="target"
                 type="number"
                 min="1"
@@ -190,6 +194,7 @@ export function Goals({
               />
               
               <input
+                id="goal-due"
                 name="due"
                 type="date"
                 value={newGoal.dueDate}
@@ -197,6 +202,7 @@ export function Goals({
               />
               
               <select 
+                id="goal-priority"
                 name="priority"
                 value={newGoal.priority}
                 onChange={(e) => setNewGoal(prev => ({ ...prev, priority: e.target.value as 'H' | 'M' | 'L' }))}
@@ -230,6 +236,8 @@ export function Goals({
       <div className="goal-list">
         <div className="goal-filters">
           <select
+            id="filter-subject"
+            name="filterSubject"
             value={filters.subject}
             onChange={(e) => setFilters(prev => ({ ...prev, subject: e.target.value }))}
           >
@@ -242,6 +250,8 @@ export function Goals({
           </select>
           
           <select
+            id="filter-status"
+            name="filterStatus"
             value={filters.status}
             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
           >

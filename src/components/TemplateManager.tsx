@@ -87,6 +87,8 @@ export function TemplateManager({
         <div className="template-controls">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '16px' }}>
             <select 
+              id="template-category"
+              name="templateCategory"
               className="" 
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -102,6 +104,8 @@ export function TemplateManager({
             <label className="btn" style={{ cursor: 'pointer' }}>
                 {isImportingTemplate ? '⏳ Importing...' : '📥 Import Template'}
                 <input
+                  id="template-import"
+                  name="templateImport"
                   type="file"
                   accept=".json"
                   onChange={handleImportTemplate}

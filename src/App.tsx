@@ -453,6 +453,8 @@ function App() {
               <label className="chip flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <input 
                   type="checkbox" 
+                  id="dark-mode-toggle"
+                  name="darkMode"
                   checked={settings?.theme === 'dark'}
                   onChange={() => settingsService.toggleDarkMode()}
                   className="hidden"
