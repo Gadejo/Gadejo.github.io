@@ -16,6 +16,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const { action, token, data, id } = body;
     
     if (!token) {
+      // For certain read operations, return empty data instead of error
+      if (action === 'loadAppData') {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data: null // This will trigger localStorage loading
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ error: 'Authentication token required' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -27,6 +38,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Verify token and get user ID
     const userId = await verifyTokenAndGetUserId(db, token);
     if (!userId) {
+      // For read operations, return empty data instead of error
+      if (action === 'loadAppData') {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data: null // This will trigger localStorage loading
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
       return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
