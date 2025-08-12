@@ -167,7 +167,26 @@ function App() {
     return unsubscribe;
   }, [settings]);
 
-  const handleLogin = async (shouldShowMigration: boolean) => {
+  const handleLogin = async (shouldShowMigrationOrUserId: boolean | string) => {
+    // Handle guest mode login
+    if (shouldShowMigrationOrUserId === 'guest-mode') {
+      try {
+        await authService.loginAsGuest();
+        setIsAuthenticated(true);
+        setShowMigration(false); // Guests don't need migration
+        
+        // Load default settings for guest
+        const guestSettings = await settingsService.loadSettings();
+        setSettings(guestSettings);
+        return;
+      } catch (error) {
+        console.error('Guest login failed:', error);
+        return;
+      }
+    }
+
+    // Handle regular login
+    const shouldShowMigration = shouldShowMigrationOrUserId as boolean;
     setIsAuthenticated(true);
     // Check both parameter and our improved detection
     const needsMigration = shouldShowMigration && hasLocalStorageData();

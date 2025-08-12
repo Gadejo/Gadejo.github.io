@@ -251,7 +251,32 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.getCurrentUser() !== null;
+    const user = this.getCurrentUser();
+    return user !== null;
+  }
+
+  // Add guest mode login
+  async loginAsGuest(): Promise<User> {
+    const guestUser: User = {
+      id: 'guest-mode',
+      email: 'guest@local',
+      displayName: 'Guest User',
+      createdAt: new Date().toISOString(),
+      isActive: true
+    };
+
+    const sessionData = {
+      user: guestUser,
+      token: 'guest-token',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+      loginTime: new Date().toISOString(),
+      deviceId: this.getDeviceId(),
+      lastRefresh: new Date().toISOString(),
+      isGuest: true
+    };
+
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessionData));
+    return guestUser;
   }
 
   private getStoredSession(): any | null {

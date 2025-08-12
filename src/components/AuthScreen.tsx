@@ -23,7 +23,12 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
   });
 
   useEffect(() => {
-    loadAvailableUsers();
+    // Add a small delay to prevent immediate API call
+    const timer = setTimeout(() => {
+      loadAvailableUsers();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const loadAvailableUsers = async () => {
@@ -36,6 +41,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
       }
     } catch (error) {
       console.error('Failed to load users:', error);
+      // If rate limited or API error, just set empty users and show register mode
+      setAvailableUsers([]);
       setMode('register');
     }
   };
@@ -163,6 +170,13 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
                 🔐 Login with Email
               </button>
             )}
+            
+            <button
+              onClick={() => onLogin('guest-mode')}
+              className="w-full bg-gray-100 text-gray-600 py-3 px-6 rounded-xl font-medium border border-gray-200 hover:bg-gray-200 transform hover:scale-105 transition-all duration-200"
+            >
+              🎮 Continue as Guest
+            </button>
           </div>
         </div>
       </div>
