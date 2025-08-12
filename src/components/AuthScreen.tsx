@@ -3,7 +3,7 @@ import { authService } from '../services/auth';
 import type { LoginCredentials, RegisterData, PublicUser } from '../types/auth';
 
 interface AuthScreenProps {
-  onLogin: (showMigration: boolean) => void;
+  onLogin: (showMigrationOrUserId: boolean | string) => void;
 }
 
 type AuthMode = 'select' | 'login' | 'register';

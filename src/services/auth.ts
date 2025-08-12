@@ -262,7 +262,12 @@ class AuthService {
       email: 'guest@local',
       displayName: 'Guest User',
       createdAt: new Date().toISOString(),
-      isActive: true
+      totalStudyTime: 0,
+      totalSessions: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      level: 1,
+      totalXp: 0
     };
 
     const sessionData = {
