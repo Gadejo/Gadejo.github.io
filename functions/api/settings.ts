@@ -1,4 +1,5 @@
 // Cloudflare Pages Function for User Settings Management
+// Enhanced version that handles missing table gracefully
 import { Env } from '../types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -26,7 +27,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
       }
       
-      // Try to get user settings, but don't fail if token is invalid
+      // Try to get user settings, but don't fail if token is invalid or table doesn't exist
       try {
         const userId = await getUserIdFromToken(db, token);
         if (userId) {
@@ -102,7 +103,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     console.error('Settings API error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Internal server error' 
+      error: 'Internal server error',
+      debug: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -140,6 +142,18 @@ async function loadUserSettings(db: D1Database, userId: string) {
   try {
     // Handle guest mode
     if (userId === 'guest-mode') {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        settings: null // This will trigger default settings usage
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // First check if the user_settings table exists
+    const tableExists = await checkTableExists(db, 'user_settings');
+    if (!tableExists) {
+      console.log('user_settings table does not exist, returning default settings');
       return new Response(JSON.stringify({ 
         success: true, 
         settings: null // This will trigger default settings usage
@@ -212,11 +226,12 @@ async function loadUserSettings(db: D1Database, userId: string) {
     
   } catch (error) {
     console.error('Load settings error:', error);
+    // Return default settings instead of error
     return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to load settings' 
+      success: true, 
+      settings: null,
+      warning: 'Failed to load settings from database, using defaults'
     }), {
-      status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -224,6 +239,19 @@ async function loadUserSettings(db: D1Database, userId: string) {
 
 async function saveUserSettings(db: D1Database, userId: string, settings: any) {
   try {
+    // First check if the user_settings table exists
+    const tableExists = await checkTableExists(db, 'user_settings');
+    if (!tableExists) {
+      console.log('user_settings table does not exist, cannot save settings');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Settings table not available - database needs migration' 
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Check if user settings already exist
     const existing = await db
       .prepare('SELECT user_id FROM user_settings WHERE user_id = ?')
@@ -318,7 +346,8 @@ async function saveUserSettings(db: D1Database, userId: string, settings: any) {
     console.error('Save settings error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Failed to save settings' 
+      error: 'Failed to save settings',
+      debug: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -328,6 +357,18 @@ async function saveUserSettings(db: D1Database, userId: string, settings: any) {
 
 async function deleteUserSettings(db: D1Database, userId: string) {
   try {
+    // First check if the user_settings table exists
+    const tableExists = await checkTableExists(db, 'user_settings');
+    if (!tableExists) {
+      console.log('user_settings table does not exist, cannot delete settings');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Settings table not available - no settings to delete' 
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     await db
       .prepare('DELETE FROM user_settings WHERE user_id = ?')
       .bind(userId)
@@ -344,11 +385,27 @@ async function deleteUserSettings(db: D1Database, userId: string) {
     console.error('Delete settings error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Failed to delete settings' 
+      error: 'Failed to delete settings',
+      debug: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+}
+
+// Helper function to check if a table exists
+async function checkTableExists(db: D1Database, tableName: string): Promise<boolean> {
+  try {
+    const result = await db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+      .bind(tableName)
+      .first();
+    
+    return !!result;
+  } catch (error) {
+    console.error(`Error checking if table ${tableName} exists:`, error);
+    return false;
   }
 }
 
