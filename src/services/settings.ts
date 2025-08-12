@@ -58,12 +58,17 @@ class SettingsService {
     try {
       // If authenticated, try to load from database
       if (authService.isAuthenticated()) {
-        const dbSettings = await this.loadFromDatabase();
-        if (dbSettings) {
-          this.settings = { ...DEFAULT_SETTINGS, ...dbSettings };
-          // Also cache in localStorage
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.settings));
-          return this.settings;
+        try {
+          const dbSettings = await this.loadFromDatabase();
+          if (dbSettings) {
+            this.settings = { ...DEFAULT_SETTINGS, ...dbSettings };
+            // Also cache in localStorage
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.settings));
+            return this.settings;
+          }
+        } catch (dbError) {
+          // Silently handle database errors and fall back to local storage
+          console.warn('Database settings load failed, using local storage:', dbError);
         }
       }
 
@@ -242,9 +247,17 @@ class SettingsService {
 
   private async loadFromDatabase(): Promise<UserSettings | null> {
     const token = authService.getStoredToken();
-    if (!token) return null;
+    if (!token || !authService.isAuthenticated()) {
+      return null;
+    }
 
     try {
+      // Check if we're in development mode and skip API call
+      if (import.meta.env.DEV) {
+        console.log('Development mode: using default settings');
+        return null;
+      }
+
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,6 +266,12 @@ class SettingsService {
           token
         })
       });
+
+      // If response is not ok, return null instead of trying to parse JSON
+      if (!response.ok) {
+        console.warn(`Settings API returned ${response.status}: ${response.statusText}`);
+        return null;
+      }
 
       const result = await response.json();
       
@@ -270,6 +289,12 @@ class SettingsService {
   private async saveToDatabase(settings: UserSettings): Promise<void> {
     const token = authService.getStoredToken();
     if (!token) throw new Error('Authentication required');
+
+    // Skip API call in development mode
+    if (import.meta.env.DEV) {
+      console.log('Development mode: skipping settings save to database');
+      return;
+    }
 
     const response = await fetch('/api/settings', {
       method: 'POST',

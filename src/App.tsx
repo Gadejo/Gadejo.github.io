@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useAppData } from './hooks/useAppData';
 import { Dashboard } from './components/Dashboard';
 import { LazyLoader } from './components/LazyLoader';
@@ -46,7 +46,7 @@ function App() {
   useEffect(() => {
     startMeasurement();
     return endMeasurement;
-  });
+  }, [startMeasurement, endMeasurement]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,22 +89,26 @@ function App() {
   const levelingSystem = LevelingSystem.getInstance();
   const achievementEngine = AchievementEngine.getInstance();
 
-  // Enhanced gesture navigation
+  // Enhanced gesture navigation with memoized callbacks
+  const onSwipeLeft = useCallback(() => {
+    const views = ['dashboard', 'goals', 'resources', 'stats', 'settings'];
+    const currentIndex = views.indexOf(currentView);
+    const nextIndex = (currentIndex + 1) % views.length;
+    setCurrentView(views[nextIndex]);
+    showEnhancedToast('Swiped to next view! 👉');
+  }, [currentView, showEnhancedToast]);
+
+  const onSwipeRight = useCallback(() => {
+    const views = ['dashboard', 'goals', 'resources', 'stats', 'settings'];
+    const currentIndex = views.indexOf(currentView);
+    const prevIndex = currentIndex === 0 ? views.length - 1 : currentIndex - 1;
+    setCurrentView(views[prevIndex]);
+    showEnhancedToast('Swiped to previous view! 👈');
+  }, [currentView, showEnhancedToast]);
+
   const { attachUnifiedGestures } = useUnifiedGestures({
-    onSwipeLeft: () => {
-      const views = ['dashboard', 'goals', 'resources', 'stats', 'settings'];
-      const currentIndex = views.indexOf(currentView);
-      const nextIndex = (currentIndex + 1) % views.length;
-      setCurrentView(views[nextIndex]);
-      showEnhancedToast('Swiped to next view! 👉');
-    },
-    onSwipeRight: () => {
-      const views = ['dashboard', 'goals', 'resources', 'stats', 'settings'];
-      const currentIndex = views.indexOf(currentView);
-      const prevIndex = currentIndex === 0 ? views.length - 1 : currentIndex - 1;
-      setCurrentView(views[prevIndex]);
-      showEnhancedToast('Swiped to previous view! 👈');
-    },
+    onSwipeLeft,
+    onSwipeRight,
     threshold: 80
   });
 
@@ -192,57 +196,27 @@ function App() {
     window.location.reload();
   };
 
-  // Show enhanced loading screen
-  if (isLoading || dataLoading || !settings) {
-    return (
-      <PageLoader 
-        message="Loading your learning journey..." 
-        icon="🧠"
-      />
-    );
-  }
 
-  // Show login screen if not authenticated
-  if (!isAuthenticated) {
-    return <AuthScreen onLogin={handleLogin} />;
-  }
-
-  // Show migration screen if needed (with debug info)
-  if (showMigration) {
-    console.log('Showing migration screen');
-    return <DataMigration onMigrationComplete={handleMigrationComplete} />;
-  }
-
-  // Show loading if data hasn't loaded yet
-  if (!data) {
-    return (
-      <PageLoader 
-        message="Setting up your workspace..." 
-        icon="📚"
-      />
-    );
-  }
-
-  const showToast = (message: string) => {
+  const showToast = useCallback((message: string) => {
     setToast({ message, isVisible: true, type: 'success' });
-  };
+  }, []);
 
-  const showEnhancedToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
+  const showEnhancedToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setToast({ message, isVisible: true, type });
-  };
+  }, []);
 
-  const showXPNotification = (xp: number, position?: { x: number; y: number }) => {
+  const showXPNotification = useCallback((xp: number, position?: { x: number; y: number }) => {
     setXpNotification({ 
       xp, 
       isVisible: true, 
       position: position || { x: window.innerWidth / 2, y: 100 } 
     });
-  };
+  }, []);
 
-  const showAchievementNotification = (title: string, description: string, icon: string) => {
+  const showAchievementNotification = useCallback((title: string, description: string, icon: string) => {
     setAchievementNotification({ title, description, icon, isVisible: true });
     setConfetti({ isActive: true }); // Trigger confetti for achievements
-  };
+  }, []);
   
   // Calculate current user level and XP
   const totalXP = Object.values(data?.subjects || {}).reduce((sum, subject) => sum + (subject.totalXP || 0), 0) + 
@@ -393,15 +367,45 @@ function App() {
       const cleanup = attachUnifiedGestures(appRef.current);
       return cleanup;
     }
+    // Return empty cleanup function if no element
+    return () => {};
   }, [attachUnifiedGestures]);
 
-  return (
-    <ErrorBoundary>
-      <div 
-        ref={appRef}
-        className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300 touch-none"
-      >
-        <div className="container max-w-7xl mx-auto px-4 py-6 animate-fade-in safe-area-insets">
+  // Render different states based on loading/auth status
+  const renderContent = () => {
+    if (isLoading || dataLoading || !settings) {
+      return (
+        <PageLoader 
+          message="Loading your learning journey..." 
+          icon="🧠"
+        />
+      );
+    }
+
+    // Show login screen if not authenticated
+    if (!isAuthenticated) {
+      return <AuthScreen onLogin={handleLogin} />;
+    }
+
+    // Show migration screen if needed (with debug info)
+    if (showMigration) {
+      console.log('Showing migration screen');
+      return <DataMigration onMigrationComplete={handleMigrationComplete} />;
+    }
+
+    // Show loading if data hasn't loaded yet
+    if (!data) {
+      return (
+        <PageLoader 
+          message="Setting up your workspace..." 
+          icon="📚"
+        />
+      );
+    }
+
+    // Main app content
+    return (
+      <div className="container max-w-7xl mx-auto px-4 py-6 animate-fade-in safe-area-insets">
         <ErrorBoundary fallback={
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
             <p className="text-red-800">Header failed to load. Please refresh the page.</p>
@@ -655,7 +659,17 @@ function App() {
             <span className="text-blue-500">🚀</span>
           </div>
         </footer>
-        </div>
+      </div>
+    );
+  };
+
+  return (
+    <ErrorBoundary>
+      <div 
+        ref={appRef}
+        className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300 touch-none"
+      >
+        {renderContent()}
       </div>
 
       <EnhancedToast 
