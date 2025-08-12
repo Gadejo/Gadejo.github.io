@@ -11,6 +11,7 @@ type AuthMode = 'select' | 'login' | 'register';
 export default function AuthScreen({ onLogin }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>('select');
   const [availableUsers, setAvailableUsers] = useState<PublicUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -23,27 +24,24 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
   });
 
   useEffect(() => {
-    // Add a small delay to prevent immediate API call
-    const timer = setTimeout(() => {
-      loadAvailableUsers();
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    // Load users immediately but don't block the UI
+    loadAvailableUsers();
   }, []);
 
   const loadAvailableUsers = async () => {
     try {
+      setIsLoadingUsers(true);
       const users = await authService.getAvailableUsers();
       setAvailableUsers(users);
       
-      if (users.length === 0) {
-        setMode('register');
-      }
+      // Don't automatically switch to register mode if users exist
+      // Let user choose between existing users or create new
     } catch (error) {
       console.error('Failed to load users:', error);
-      // If rate limited or API error, just set empty users and show register mode
+      // If rate limited or API error, just set empty users
       setAvailableUsers([]);
-      setMode('register');
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -88,7 +86,12 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
       const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
       onLogin(shouldShowMigration);
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      console.error('Registration failed:', err);
+      if (err.message && (err.message.includes('Rate limit') || err.message.includes('429'))) {
+        setError('Service is busy. Please try Guest Mode instead.');
+      } else {
+        setError(err.message || 'Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -155,28 +158,44 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
 
           {/* Action Buttons */}
           <div className="space-y-3">
+            {/* Guest mode button - always show first */}
+            <button
+              onClick={() => onLogin('guest-mode')}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              🎮 Continue as Guest (Recommended)
+            </button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or</span>
+              </div>
+            </div>
+            
             <button
               onClick={() => setMode('register')}
               className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              ✨ Create New Character
+              ✨ Create New Account
             </button>
             
-            {availableUsers.length > 0 && (
+            {!isLoadingUsers && availableUsers.length > 0 && (
               <button
                 onClick={() => setMode('login')}
                 className="w-full bg-white text-gray-700 py-3 px-6 rounded-xl font-medium border border-gray-300 hover:bg-gray-50 transform hover:scale-105 transition-all duration-200"
               >
-                🔐 Login with Email
+                🔐 Login with Existing Account
               </button>
             )}
             
-            <button
-              onClick={() => onLogin('guest-mode')}
-              className="w-full bg-gray-100 text-gray-600 py-3 px-6 rounded-xl font-medium border border-gray-200 hover:bg-gray-200 transform hover:scale-105 transition-all duration-200"
-            >
-              🎮 Continue as Guest
-            </button>
+            {isLoadingUsers && (
+              <div className="w-full py-3 px-6 text-center text-gray-500 text-sm">
+                Looking for existing accounts...
+              </div>
+            )}
           </div>
         </div>
       </div>
