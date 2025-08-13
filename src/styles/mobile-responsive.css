@@ -361,7 +361,7 @@
     padding: var(--spacing-4) !important;
   }
 
-  .modal-content {
+  .modal {
     width: 100% !important;
     max-width: none !important;
     max-height: 90vh !important;

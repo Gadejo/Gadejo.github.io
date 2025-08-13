@@ -795,6 +795,29 @@ body {
 .bg-yellow-500 { background-color: #eab308; }
 .min-w-32 { min-width: 8rem; }
 
+/* Theme-aware gradient backgrounds */
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+.from-blue-600 {
+  --tw-gradient-from: var(--color-primary-600);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(59, 130, 246, 0));
+}
+
+.to-blue-700 {
+  --tw-gradient-to: var(--color-primary-700);
+}
+
+/* Dark mode adjustments for gradients */
+[data-theme="dark"] .from-blue-600 {
+  --tw-gradient-from: var(--color-primary-500);
+}
+
+[data-theme="dark"] .to-blue-700 {
+  --tw-gradient-to: var(--color-primary-600);
+}
+
 /* Accessibility Improvements */
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -144,7 +144,7 @@ export function AchievementsPanel({ subjects, sessions, isOpen, onClose }: Achie
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div ref={panelRef} className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
-        <CardHeader className="bg-gradient-to-br from-purple-600 to-blue-600 text-white">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="flex items-center justify-between w-full">
             <div>
               <h2 className="text-xl font-semibold">🏆 Achievements</h2>
