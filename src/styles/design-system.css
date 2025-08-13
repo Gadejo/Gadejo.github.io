@@ -237,7 +237,7 @@ body {
 .btn-secondary {
   background-color: var(--color-gray-100);
   color: var(--color-gray-700);
-  border-color: var(--color-gray-300);
+  border: 1px solid var(--color-gray-300);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -274,12 +274,12 @@ body {
 [data-theme="dark"] .btn-secondary {
   background-color: var(--color-gray-200);
   color: var(--color-gray-900);
-  border-color: var(--color-gray-300);
+  border: 1px solid var(--color-gray-300);
 }
 
 [data-theme="dark"] .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-gray-300);
-  border-color: var(--color-gray-400);
+  border: 1px solid var(--color-gray-400);
 }
 
 /* Button Sizes */
