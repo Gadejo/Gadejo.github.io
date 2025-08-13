@@ -1,4 +1,5 @@
 import type { SubjectData, Session } from '../types';
+import { Card, CardBody, CardHeader } from './ui';
 
 interface StatsProps {
   subjects: Record<string, SubjectData>;
@@ -96,287 +97,166 @@ export function Stats({ subjects, sessions }: StatsProps) {
 
   if (Object.keys(subjects).length === 0) {
     return (
-      <div className="stats-view">
-        <div className="empty-state">
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-          <h3>No Data Yet</h3>
-          <p>Start learning and tracking your progress to see detailed statistics!</p>
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center py-20">
+          <div className="text-6xl mb-4">📊</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Data Yet</h3>
+          <p className="text-gray-600">Start learning and tracking your progress to see detailed statistics!</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="stats-view">
-      <div className="stats-grid">
+    <div className="max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weekly Minutes Chart */}
-        <div className="stat-card">
-          <h3>This Week — Minutes by Subject</h3>
-          <div className="chart-bars">
-            {Object.values(subjects).map(subject => {
-              const minutes = weeklyMinutes[subject.config.id] || 0;
-              const percentage = (minutes / maxWeeklyMinutes) * 100;
-              
-              return (
-                <div key={subject.config.id} className="chart-bar">
-                  <div className="bar-label">
-                    <strong>{subject.config.emoji}</strong> {subject.config.name}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-gray-900">This Week — Minutes by Subject</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              {Object.values(subjects).map(subject => {
+                const minutes = weeklyMinutes[subject.config.id] || 0;
+                const percentage = (minutes / maxWeeklyMinutes) * 100;
+                
+                return (
+                  <div key={subject.config.id} className="flex items-center gap-3">
+                    <div className="w-32 text-sm font-medium text-gray-900">
+                      <span className="mr-2">{subject.config.emoji}</span>
+                      {subject.config.name}
+                    </div>
+                    <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${percentage}%`,
+                          backgroundColor: subject.config.color
+                        }}
+                      />
+                    </div>
+                    <div className="w-16 text-sm font-bold text-gray-600 text-right">{minutes}m</div>
                   </div>
-                  <div className="bar-track">
-                    <div 
-                      className="bar-fill"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: subject.config.color
-                      }}
-                    />
-                  </div>
-                  <div className="bar-value">{minutes}m</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
 
         {/* Streaks Chart */}
-        <div className="stat-card">
-          <h3>Current Streaks</h3>
-          <div className="chart-bars">
-            {Object.values(subjects).map(subject => {
-              const streaks = getStudyStreak(subject.config.id);
-              const percentage = Math.min(100, streaks.current * 5); // Cap at 100% for display
-              
-              return (
-                <div key={subject.config.id} className="chart-bar">
-                  <div className="bar-label">
-                    <strong>{subject.config.emoji}</strong> {subject.config.name}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-gray-900">Current Streaks</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              {Object.values(subjects).map(subject => {
+                const streaks = getStudyStreak(subject.config.id);
+                const percentage = Math.min(100, streaks.current * 5); // Cap at 100% for display
+                
+                return (
+                  <div key={subject.config.id} className="flex items-center gap-3">
+                    <div className="w-32 text-sm font-medium text-gray-900">
+                      <span className="mr-2">{subject.config.emoji}</span>
+                      {subject.config.name}
+                    </div>
+                    <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${percentage}%`,
+                          backgroundColor: subject.config.color
+                        }}
+                      />
+                    </div>
+                    <div className="w-16 text-sm font-bold text-gray-600 text-right">
+                      {streaks.current} day{streaks.current !== 1 ? 's' : ''}
+                    </div>
                   </div>
-                  <div className="bar-track">
-                    <div 
-                      className="bar-fill"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: subject.config.color
-                      }}
-                    />
-                  </div>
-                  <div className="bar-value">
-                    {streaks.current} day{streaks.current !== 1 ? 's' : ''}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+                })}
+            </div>
+          </CardBody>
+        </Card>
 
         {/* All-Time Totals */}
-        <div className="stat-card">
-          <h3>All-Time Totals</h3>
-          <div className="chart-bars">
-            {Object.values(subjects).map(subject => {
-              const minutes = totalTimes[subject.config.id] || 0;
-              const percentage = (minutes / maxTotalMinutes) * 100;
-              
-              return (
-                <div key={subject.config.id} className="chart-bar">
-                  <div className="bar-label">
-                    <strong>{subject.config.emoji}</strong> {subject.config.name}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-gray-900">All-Time Totals</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              {Object.values(subjects).map(subject => {
+                const minutes = totalTimes[subject.config.id] || 0;
+                const percentage = (minutes / maxTotalMinutes) * 100;
+                
+                return (
+                  <div key={subject.config.id} className="flex items-center gap-3">
+                    <div className="w-32 text-sm font-medium text-gray-900">
+                      <span className="mr-2">{subject.config.emoji}</span>
+                      {subject.config.name}
+                    </div>
+                    <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${percentage}%`,
+                          backgroundColor: subject.config.color
+                        }}
+                      />
+                    </div>
+                    <div className="w-16 text-sm font-bold text-gray-600 text-right">{formatTime(minutes)}</div>
                   </div>
-                  <div className="bar-track">
-                    <div 
-                      className="bar-fill"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: subject.config.color
-                      }}
-                    />
-                  </div>
-                  <div className="bar-value">{formatTime(minutes)}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+                })}
+            </div>
+          </CardBody>
+        </Card>
 
         {/* Session Summary */}
-        <div className="stat-card">
-          <h3>Session Summary</h3>
-          <div className="summary-list">
-            {Object.values(subjects).map(subject => {
-              const sessionCount = sessionCounts[subject.config.id] || 0;
-              const avgLength = avgSessionLengths[subject.config.id] || 0;
-              const streaks = getStudyStreak(subject.config.id);
-              
-              return (
-                <div key={subject.config.id} className="summary-item">
-                  <div className="summary-header">
-                    <span className="summary-emoji">{subject.config.emoji}</span>
-                    <span className="summary-name">{subject.config.name}</span>
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold text-gray-900">Session Summary</h3>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-4">
+              {Object.values(subjects).map(subject => {
+                const sessionCount = sessionCounts[subject.config.id] || 0;
+                const avgLength = avgSessionLengths[subject.config.id] || 0;
+                const streaks = getStudyStreak(subject.config.id);
+                
+                return (
+                  <div key={subject.config.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{subject.config.emoji}</span>
+                      <span className="font-semibold text-sm text-gray-900">{subject.config.name}</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="text-center">
+                        <span className="block text-xs text-gray-500 mb-1">Sessions</span>
+                        <span className="block text-sm font-bold text-gray-900">{sessionCount}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-xs text-gray-500 mb-1">Avg Length</span>
+                        <span className="block text-sm font-bold text-gray-900">{avgLength}m</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-xs text-gray-500 mb-1">Best Streak</span>
+                        <span className="block text-sm font-bold text-gray-900">{streaks.longest} days</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-xs text-gray-500 mb-1">XP</span>
+                        <span className="block text-sm font-bold text-gray-900">{subject.totalXP}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="summary-stats">
-                    <div className="summary-stat">
-                      <span className="stat-label">Sessions</span>
-                      <span className="stat-value">{sessionCount}</span>
-                    </div>
-                    <div className="summary-stat">
-                      <span className="stat-label">Avg Length</span>
-                      <span className="stat-value">{avgLength}m</span>
-                    </div>
-                    <div className="summary-stat">
-                      <span className="stat-label">Best Streak</span>
-                      <span className="stat-value">{streaks.longest} days</span>
-                    </div>
-                    <div className="summary-stat">
-                      <span className="stat-label">XP</span>
-                      <span className="stat-value">{subject.totalXP}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+                })}
+            </div>
+          </CardBody>
+        </Card>
       </div>
-
-      <style>{`
-        .stats-view {
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .stats-grid {
-          display: grid;
-          gap: 16px;
-          grid-template-columns: 1fr;
-        }
-
-        @media (min-width: 900px) {
-          .stats-grid {
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        .stat-card {
-          background: var(--surface);
-          border-radius: 12px;
-          box-shadow: var(--shadow);
-          padding: 20px;
-        }
-
-        .stat-card h3 {
-          margin: 0 0 16px 0;
-          color: var(--text);
-          font-size: 16px;
-        }
-
-        .chart-bars {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .chart-bar {
-          display: grid;
-          grid-template-columns: 120px 1fr 60px;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .bar-label {
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .bar-value {
-          font-size: 12px;
-          font-weight: 700;
-          text-align: right;
-          color: var(--muted);
-        }
-
-        .summary-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .summary-item {
-          padding: 12px;
-          background: #f3f5f9;
-          border-radius: 10px;
-        }
-
-        [data-theme="dark"] .summary-item {
-          background: #17202f;
-        }
-
-        .summary-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-
-        .summary-emoji {
-          font-size: 16px;
-        }
-
-        .summary-name {
-          font-weight: 700;
-          font-size: 14px;
-        }
-
-        .summary-stats {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-          gap: 12px;
-        }
-
-        .summary-stat {
-          text-align: center;
-        }
-
-        .stat-label {
-          display: block;
-          font-size: 11px;
-          color: var(--muted);
-          margin-bottom: 2px;
-        }
-
-        .stat-value {
-          display: block;
-          font-size: 13px;
-          font-weight: 700;
-          color: var(--text);
-        }
-
-        .empty-state {
-          text-align: center;
-          color: var(--muted);
-          padding: 80px 20px;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 8px 0;
-          color: var(--text);
-        }
-
-        @media (max-width: 600px) {
-          .chart-bar {
-            grid-template-columns: 1fr;
-            gap: 6px;
-            text-align: center;
-          }
-
-          .bar-value {
-            text-align: center;
-          }
-
-          .summary-stats {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-      `}</style>
     </div>
   );
 }
