@@ -54,7 +54,7 @@ export function Dashboard({
       const cleanup = attachUnifiedGestures(dashboardRef.current);
       
       // Apply staggered entrance animation to subject cards
-      const cards = dashboardRef.current.querySelectorAll('.subject-card');
+      const cards = dashboardRef.current.querySelectorAll('.card');
       if (cards.length > 0) {
         staggeredEntrance(Array.from(cards) as HTMLElement[], 'slideUp', 150);
       }
@@ -68,7 +68,7 @@ export function Dashboard({
     setActiveQuest(subjectData);
     
     // Add subtle animation feedback
-    const questCards = dashboardRef.current?.querySelectorAll('.subject-card');
+    const questCards = dashboardRef.current?.querySelectorAll('.card');
     questCards?.forEach((card) => {
       if (card instanceof HTMLElement) {
         pulse(card, { duration: 300 });

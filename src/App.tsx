@@ -28,8 +28,8 @@ import { settingsService } from './services/settings';
 import { hasLocalStorageData } from './utils/storage';
 import type { SubjectConfig, Template, AppData } from './types';
 import type { UserSettings } from './services/settings';
-import './styles/index.css';
 import './styles/design-system.css';
+import './styles/index.css';
 import './styles/mobile-responsive.css';
 import './styles/advanced-animations.css';
 

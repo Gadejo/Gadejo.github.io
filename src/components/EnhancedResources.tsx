@@ -602,7 +602,7 @@ export function EnhancedResources({ subjects, onShowToast }: EnhancedResourcesPr
         }
 
         [data-theme="dark"] .view-toggles {
-          background: #1a2333;
+          background: var(--color-gray-200);
         }
 
         .view-btn {
@@ -945,7 +945,7 @@ function ResourceCard({
         }
 
         [data-theme="dark"] .resource-card {
-          border-color: rgba(255,255,255,0.06);
+          border-color: var(--color-gray-200);
         }
 
         .resource-card::before {
@@ -1034,7 +1034,7 @@ function ResourceCard({
         [data-theme="dark"] .priority-badge,
         [data-theme="dark"] .recent-badge,
         [data-theme="dark"] .usage-badge {
-          background: #1a2333;
+          background: var(--color-gray-200);
         }
 
         .priority-high {

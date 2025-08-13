@@ -7,6 +7,8 @@ export interface CardProps {
   loading?: boolean;
   error?: Error | null;
   onClick?: () => void;
+  style?: React.CSSProperties;
+  [key: string]: any; // Allow additional props like data-* attributes
 }
 
 export function Card({ 
@@ -15,7 +17,9 @@ export function Card({
   hover = false, 
   loading = false,
   error = null,
-  onClick 
+  onClick,
+  style,
+  ...props
 }: CardProps) {
   const baseClass = 'card';
   const hoverClass = hover || onClick ? 'card-hover' : '';
@@ -55,7 +59,8 @@ export function Card({
     <CardComponent 
       className={classes} 
       onClick={onClick}
-      style={onClick ? { cursor: 'pointer', border: 'none', padding: 0, background: 'none' } : undefined}
+      style={onClick ? { cursor: 'pointer', border: 'none', padding: 0, background: 'none', ...style } : style}
+      {...props}
     >
       {children}
     </CardComponent>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Card, CardBody, CardFooter, Button, PrimaryButton, SecondaryButton } from './ui';
 import type { SubjectData } from '../types';
 
 interface SubjectCardProps {
@@ -43,84 +44,111 @@ export function SubjectCard({
   };
 
   return (
-    <article 
-      className="card" 
+    <Card 
+      className="subject-card-wrapper"
       style={{ 
-        '--accent': config.color,
         animationDelay: `${animationDelay}ms`
-      } as React.CSSProperties}>
-      <div className="header">
-        <div className="subject-title">
-          <span style={{ fontSize: '18px' }}>{config.emoji}</span>
-          <span>{config.name}</span>
+      } as React.CSSProperties}
+      data-subject-id={config.id}
+    >
+      <CardBody>
+        <div className="flex items-center justify-between mb-3">
+          <div className="subject-title">
+            <span className="text-lg mr-2">{config.emoji}</span>
+            <span className="font-semibold">{config.name}</span>
+          </div>
+          <small className="text-xs text-gray-500 font-medium">
+            Small steps &gt; zero days
+          </small>
         </div>
-        <small style={{ color: 'var(--muted)', fontWeight: 800 }}>
-          Small steps &gt; zero days
-        </small>
-      </div>
 
-      {/* Daily Pips */}
-      <div className="pips">
-        {[...Array(3)].map((_, i) => (
+        {/* Daily Pips */}
+        <div className="pips">
+          {[...Array(3)].map((_, i) => (
+            <div 
+              key={i}
+              className="pip"
+              aria-checked={i < pipCount}
+              onClick={pipCount < 3 ? onPipClick : undefined}
+              style={{ cursor: pipCount < 3 ? 'pointer' : 'default' }}
+            />
+          ))}
+          <span className="hint">Tap a pip = +{config.pipAmount}m</span>
+        </div>
+
+        {/* Stats */}
+        <div className="statline">
+          <div className="stat">
+            <span className="label">Current Streak</span>
+            <span className="value">{subjectData.currentStreak} 🔥</span>
+          </div>
+          <div className="stat">
+            <span className="label">Today</span>
+            <span className="value">{todayMinutes} min ⏱️</span>
+          </div>
+          <div className="stat">
+            <span className="label">Achievement</span>
+            <span className="value">{currentAchievement?.name || 'None'}</span>
+          </div>
+          <div className="stat">
+            <span className="label">Total</span>
+            <span className="value">
+              {Math.floor(subjectData.totalMinutes / 60)}h {subjectData.totalMinutes % 60}m
+            </span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="progress">
           <div 
-            key={i}
-            className="pip"
-                        aria-checked={i < pipCount}
-            onClick={pipCount < 3 ? onPipClick : undefined}
-            style={{ cursor: pipCount < 3 ? 'pointer' : 'default' }}
+            className="bar" 
+            style={{ 
+              width: `${progressPercent}%`,
+              backgroundColor: config.color
+            }} 
           />
-        ))}
-        <span className="hint">Tap a pip = +{config.pipAmount}m</span>
-      </div>
+        </div>
+      </CardBody>
 
-      {/* Stats */}
-      <div className="statline">
-        <div className="stat">
-          <span className="label">Current Streak</span>
-          <span className="value">{subjectData.currentStreak} 🔥</span>
+      <CardFooter>
+        {/* Action Buttons */}
+        <div className="btnrow">
+          <PrimaryButton 
+            onClick={onStartQuest}
+            style={{ backgroundColor: config.color }}
+            className="flex-1"
+          >
+            ▶️ Start Quest
+          </PrimaryButton>
+          <SecondaryButton 
+            size="sm" 
+            onClick={() => onQuickAdd(15)}
+            className="btn quick"
+          >
+            +15m
+          </SecondaryButton>
+          <SecondaryButton 
+            size="sm" 
+            onClick={() => onQuickAdd(30)}
+            className="btn quick"
+          >
+            +30m
+          </SecondaryButton>
+          <SecondaryButton 
+            size="sm" 
+            onClick={() => onQuickAdd(45)}
+            className="btn quick"
+          >
+            +45m
+          </SecondaryButton>
+          <SecondaryButton 
+            size="sm" 
+            onClick={() => onQuickAdd(60)}
+            className="btn quick"
+          >
+            +60m
+          </SecondaryButton>
         </div>
-        <div className="stat">
-          <span className="label">Today</span>
-          <span className="value">{todayMinutes} min ⏱️</span>
-        </div>
-        <div className="stat">
-          <span className="label">Achievement</span>
-          <span className="value">{currentAchievement?.name || 'None'}</span>
-        </div>
-        <div className="stat">
-          <span className="label">Total</span>
-          <span className="value">
-            {Math.floor(subjectData.totalMinutes / 60)}h {subjectData.totalMinutes % 60}m
-          </span>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div 
-        className="progress"
-      >
-        <i 
-          className="bar" 
-          style={{ 
-            width: `${progressPercent}%`,
-            backgroundColor: config.color
-          }} 
-        />
-      </div>
-
-      {/* Action Buttons */}
-      <div className="btnrow">
-        <button 
-          className="btn btn-primary" 
-          onClick={onStartQuest}
-          style={{ backgroundColor: config.color }}
-        >
-          ▶️ Start Quest
-        </button>
-        <button className="btn quick" onClick={() => onQuickAdd(15)}>+15m</button>
-        <button className="btn quick" onClick={() => onQuickAdd(30)}>+30m</button>
-        <button className="btn quick" onClick={() => onQuickAdd(45)}>+45m</button>
-        <button className="btn quick" onClick={() => onQuickAdd(60)}>+60m</button>
 
         {/* Manual Add */}
         <details 
@@ -132,6 +160,7 @@ export function SubjectCard({
           <form className="manual" onSubmit={handleManualSubmit}>
             <input
               type="number"
+              className="form-input"
               id={`manual-minutes-${config.id}`}
               name="manualMinutes"
               min="1"
@@ -141,6 +170,7 @@ export function SubjectCard({
               required
             />
             <select 
+              className="form-input"
               id={`manual-quest-type-${config.id}`}
               name="manualQuestType"
               value={manualQuestType}
@@ -154,6 +184,7 @@ export function SubjectCard({
             </select>
             <input
               type="text"
+              className="form-input"
               id={`manual-notes-${config.id}`}
               name="manualNotes"
               placeholder="Notes (optional)"
@@ -161,10 +192,10 @@ export function SubjectCard({
               onChange={(e) => setManualNotes(e.target.value)}
               style={{ gridColumn: '1 / -1' }}
             />
-            <button className="btn" type="submit">Add</button>
+            <Button variant="primary" type="submit">Add</Button>
           </form>
         </details>
-      </div>
-    </article>
+      </CardFooter>
+    </Card>
   );
 }

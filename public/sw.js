@@ -58,6 +58,11 @@ function getCacheStrategy(request) {
 
 // Cache response with appropriate cache
 function cacheResponse(request, response, strategy) {
+  // Check if response can be cloned (not already consumed)
+  if (!response || response.bodyUsed) {
+    return Promise.resolve();
+  }
+  
   const url = new URL(request.url);
   let cacheName = RUNTIME_CACHE;
   
@@ -69,6 +74,8 @@ function cacheResponse(request, response, strategy) {
   
   return caches.open(cacheName).then(cache => {
     return cache.put(request, response.clone());
+  }).catch(err => {
+    console.warn('Failed to cache response:', err);
   });
 }
 
