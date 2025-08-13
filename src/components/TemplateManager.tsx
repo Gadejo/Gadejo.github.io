@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardBody, CardHeader, CardFooter, PrimaryButton, SecondaryButton, DangerButton, Badge } from './ui';
 import type { Template } from '../types';
 import { builtInTemplates } from '../utils/defaults';
 import { loadUserTemplates, saveUserTemplate, deleteUserTemplate, importTemplate } from '../utils/storage';
@@ -77,53 +78,56 @@ export function TemplateManager({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal template-modal">
-        <div className="modal-header">
-          <h2>Learning Templates</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <h2 className="text-xl font-semibold">📚 Learning Templates</h2>
+            <SecondaryButton size="sm" onClick={onClose}>✕</SecondaryButton>
+          </div>
+        </CardHeader>
 
-        <div className="template-controls">
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '16px' }}>
+        <div className="p-4 border-b bg-gray-50">
+          <div className="flex gap-3 items-center">
             <select 
               id="template-category"
               name="templateCategory"
-              className="" 
+              className="form-input flex-1"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              style={{ flex: 1 }}
             >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category}
+                </option>
+              ))}
             </select>
             
-            <label className="btn" style={{ cursor: 'pointer' }}>
-                {isImportingTemplate ? '⏳ Importing...' : '📥 Import Template'}
-                <input
-                  id="template-import"
-                  name="templateImport"
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportTemplate}
-                  disabled={isImportingTemplate}
-                  style={{ display: 'none' }}
-                />
-              </label>
+            <label 
+              className={`btn btn-secondary ${isImportingTemplate ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+            >
+              {isImportingTemplate ? '⏳ Importing...' : '📥 Import Template'}
+              <input
+                id="template-import"
+                name="templateImport"
+                type="file"
+                accept=".json"
+                onChange={handleImportTemplate}
+                disabled={isImportingTemplate}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 
-        <div className="modal-body template-scroll-area">
+        <CardBody className="max-h-96 overflow-y-auto">
           {filteredTemplates.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
+            <div className="text-center py-10 text-gray-500">
               No templates found in this category.
             </div>
           ) : (
             <>
-              <div className="template-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredTemplates.map(template => (
                   <TemplateCard
                     key={template.id}
@@ -135,25 +139,19 @@ export function TemplateManager({
                 ))}
               </div>
               {filteredTemplates.length > 6 && (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '12px', 
-                  color: 'var(--muted)', 
-                  fontSize: '12px',
-                  opacity: 0.7
-                }}>
+                <div className="text-center text-xs text-gray-500 opacity-70 py-3">
                   ↕️ Scroll to see more templates
                 </div>
               )}
             </>
           )}
-        </div>
+        </CardBody>
 
-        <div className="modal-footer">
-          <button className="btn" onClick={onClose}>
+        <CardFooter className="flex justify-end">
+          <SecondaryButton onClick={onClose}>
             Close
-          </button>
-        </div>
+          </SecondaryButton>
+        </CardFooter>
       </div>
     </div>
   );
@@ -170,65 +168,68 @@ function TemplateCard({ template, isBuiltIn, onApply, onDelete }: TemplateCardPr
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="template-card">
-      <div className="template-header">
-        <div>
-          <h3>{template.name}</h3>
-          <div className="template-meta">
-            <span className="badge">{template.category}</span>
-            <span className="badge">{template.subjects.length} subjects</span>
-            {isBuiltIn && <span className="badge built-in">Built-in</span>}
+    <Card className="hover-lift">
+      <CardHeader>
+        <div className="w-full">
+          <h3 className="font-semibold text-gray-900 mb-2">{template.name}</h3>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="primary" size="sm">{template.category}</Badge>
+            <Badge variant="gray" size="sm">{template.subjects.length} subjects</Badge>
+            {isBuiltIn && <Badge variant="success" size="sm">Built-in</Badge>}
           </div>
         </div>
-      </div>
+      </CardHeader>
 
-      <p className="template-description">
-        {template.description}
-      </p>
+      <CardBody>
+        <p className="text-sm text-gray-600 mb-4">
+          {template.description}
+        </p>
 
-      <details 
-        open={expanded}
-        onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
-      >
-        <summary>View Subjects</summary>
-        <div className="subject-preview-list">
-          {template.subjects.map(subject => (
-            <div key={subject.id} className="subject-preview-item">
-              <span style={{ fontSize: '16px' }}>{subject.emoji}</span>
-              <span>{subject.name}</span>
-              <span className="subject-meta">
-                {subject.questTypes.length} quests • {subject.achievements.length} achievements
-              </span>
-            </div>
-          ))}
+        <details 
+          open={expanded}
+          onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
+          className="mb-4"
+        >
+          <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+            View Subjects
+          </summary>
+          <div className="mt-3 space-y-2">
+            {template.subjects.map(subject => (
+              <div key={subject.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                <span className="text-lg">{subject.emoji}</span>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{subject.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {subject.questTypes.length} quests • {subject.achievements.length} achievements
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+
+        <div className="text-xs text-gray-500 mb-4">
+          by {template.author} • v{template.version}
         </div>
-      </details>
+      </CardBody>
 
-      <div className="template-actions">
-        <button 
-          className="btn btn-primary"
+      <CardFooter className="flex gap-2">
+        <PrimaryButton 
           onClick={onApply}
+          className="flex-1"
         >
           Apply Template
-        </button>
+        </PrimaryButton>
         
         {!isBuiltIn && (
-          <button 
-            className="btn"
+          <DangerButton 
+            size="sm"
             onClick={onDelete}
-            style={{ color: 'var(--warn)' }}
           >
             Delete
-          </button>
+          </DangerButton>
         )}
-      </div>
-
-      <div className="template-footer">
-        <small>
-          by {template.author} • v{template.version}
-        </small>
-      </div>
-
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

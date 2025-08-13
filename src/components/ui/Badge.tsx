@@ -6,6 +6,7 @@ export interface BadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   dot?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function Badge({
@@ -13,7 +14,8 @@ export function Badge({
   variant = 'primary',
   size = 'md',
   className = '',
-  dot = false
+  dot = false,
+  style
 }: BadgeProps) {
   const baseClass = 'badge';
   const variantClass = `badge-${variant}`;
@@ -32,7 +34,7 @@ export function Badge({
   ].filter(Boolean).join(' ');
 
   return (
-    <span className={classes}>
+    <span className={classes} style={style}>
       {dot && (
         <div className="w-2 h-2 rounded-full bg-current opacity-75 mr-1.5" />
       )}
