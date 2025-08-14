@@ -51,6 +51,20 @@ nav {
   justify-content: center;
 }
 
+.nav-container {
+  display: flex;
+  gap: var(--spacing-1);
+  background-color: var(--color-gray-100);
+  padding: var(--spacing-1);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-inner);
+  margin-top: var(--spacing-4);
+}
+
+[data-theme="dark"] .nav-container {
+  background-color: var(--color-gray-800);
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -75,14 +89,16 @@ nav {
   background-color: rgba(59, 130, 246, 0.1);
 }
 
-.tab[aria-current="page"] {
+.tab[aria-current="page"],
+.tab.tab-active {
   color: var(--color-primary-600);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border);
 }
 
-[data-theme="dark"] .tab[aria-current="page"] {
+[data-theme="dark"] .tab[aria-current="page"],
+[data-theme="dark"] .tab.tab-active {
   color: var(--color-primary-400);
   background-color: var(--color-surface-elevated);
 }
@@ -258,11 +274,22 @@ nav {
    PIP SYSTEM COMPONENTS
    =================================== */
 
-.pip-container {
+.pip-container,
+.pips {
   display: flex;
-  gap: var(--spacing-1);
-  justify-content: center;
+  gap: var(--spacing-2);
+  align-items: center;
+  justify-content: flex-start;
   margin: var(--spacing-3) 0;
+  padding: var(--spacing-2);
+  background-color: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+[data-theme="dark"] .pip-container,
+[data-theme="dark"] .pips {
+  background-color: var(--color-surface-elevated);
 }
 
 .pip {
@@ -275,6 +302,7 @@ nav {
   transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .pip:hover {
@@ -282,19 +310,43 @@ nav {
   border-color: var(--color-primary-400);
 }
 
-.pip.filled {
-  background: linear-gradient(135deg, var(--color-warning-400), var(--color-warning-500));
-  border-color: var(--color-warning-500);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+/* Green filled pips */
+.pip[aria-checked="true"] {
+  background: linear-gradient(135deg, var(--color-success-400), var(--color-success-500));
+  border-color: var(--color-success-500);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
 }
 
-.pip.filled::after {
-  content: '✨';
+.pip[aria-checked="true"]::after {
+  content: '✅';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: var(--font-size-xs);
+}
+
+/* Legacy support for .filled class */
+.pip.filled {
+  background: linear-gradient(135deg, var(--color-success-400), var(--color-success-500));
+  border-color: var(--color-success-500);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+.pip.filled::after {
+  content: '✅';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--font-size-xs);
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-left: var(--spacing-2);
+  font-style: italic;
 }
 
 /* ===================================

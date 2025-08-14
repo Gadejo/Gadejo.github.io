@@ -323,6 +323,12 @@ p {
   box-shadow: var(--shadow-md);
 }
 
+[data-theme="dark"] .btn-secondary {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
 [data-theme="dark"] .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-surface-elevated);
 }
@@ -524,6 +530,37 @@ p {
 [data-theme="dark"] .badge-info {
   background-color: rgba(168, 85, 247, 0.2);
   color: var(--color-info-200);
+}
+
+/* Dark mode for additional components */
+[data-theme="dark"] .card {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .input {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .input:focus {
+  border-color: var(--color-primary-400);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] p {
+  color: var(--color-text-secondary);
 }
 
 /* === PROGRESS BARS === */
@@ -795,4 +832,169 @@ p {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* === MODAL COMPONENTS === */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--spacing-4);
+  animation: modalBackdropEnter var(--transition-base);
+}
+
+@keyframes modalBackdropEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  z-index: var(--z-modal);
+  max-height: 90vh;
+  overflow-y: auto;
+  outline: none;
+  animation: modalEnter var(--transition-base);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modal sizes */
+.modal-sm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal-md {
+  width: 100%;
+  max-width: 500px;
+}
+
+.modal-lg {
+  width: 100%;
+  max-width: 700px;
+}
+
+.modal-xl {
+  width: 100%;
+  max-width: 900px;
+}
+
+.modal-full {
+  width: 95vw;
+  height: 95vh;
+  max-width: none;
+  max-height: none;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-6) var(--spacing-6) 0 var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-6);
+  padding-bottom: var(--spacing-4);
+}
+
+.modal-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.modal-close-button {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--spacing-2);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--spacing-8);
+  min-height: var(--spacing-8);
+}
+
+.modal-close-button:hover {
+  color: var(--color-text);
+  background-color: var(--color-gray-100);
+}
+
+[data-theme="dark"] .modal-close-button:hover {
+  background-color: var(--color-gray-700);
+}
+
+.modal-body {
+  padding: 0 var(--spacing-6) var(--spacing-6) var(--spacing-6);
+}
+
+.modal-footer {
+  padding: var(--spacing-4) var(--spacing-6) var(--spacing-6) var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-4);
+}
+
+/* Dark mode modal styles */
+[data-theme="dark"] .modal {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+[data-theme="dark"] .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: var(--spacing-2);
+  }
+  
+  .modal-sm,
+  .modal-md,
+  .modal-lg,
+  .modal-xl {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+  
+  .modal-full {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: var(--spacing-4);
+    padding-right: var(--spacing-4);
+  }
 }

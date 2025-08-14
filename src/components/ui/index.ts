@@ -13,6 +13,9 @@ export type { InputProps, TextareaProps, SelectProps } from './Input';
 export { default as Badge, StatusBadge, NumberBadge, LevelBadge, StreakBadge, XPBadge, AchievementBadge, TimeBadge } from './Badge';
 export type { BadgeProps } from './Badge';
 
+export { default as Modal, ModalHeader, ModalBody, ModalFooter, ConfirmModal } from './Modal';
+export type { ModalProps } from './Modal';
+
 // Re-export loading components
 export { 
   Spinner, 

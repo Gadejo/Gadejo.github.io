@@ -431,129 +431,115 @@ function App() {
             <p className="text-red-800">Header failed to load. Please refresh the page.</p>
           </div>
         }>
-          <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 mb-8 animate-slide-down">
-            <div className="flex items-center justify-between mb-6">
-              <div className="title flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                  <span className="text-2xl">🎮</span>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    ADHD Learning RPG
-                  </h1>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center px-2 py-1 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900 rounded-full text-xs font-medium text-green-700 dark:text-green-300">
-                      v4.1 • Professional
-                    </span>
+          <header className="card shadow-lg mb-8 animate-slide-down" style={{ backdropFilter: 'blur(12px)' }}>
+            <div className="card-body">
+              <div className="flex items-center justify-between mb-6">
+                <div className="title">
+                  <div style={{ 
+                    padding: 'var(--spacing-3)', 
+                    background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-info-500))', 
+                    borderRadius: 'var(--radius-2xl)', 
+                    boxShadow: 'var(--shadow-lg)',
+                    display: 'inline-block',
+                    marginRight: 'var(--spacing-4)'
+                  }}>
+                    <span style={{ fontSize: 'var(--font-size-2xl)' }}>🎮</span>
+                  </div>
+                  <div style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                    <h1>ADHD Learning RPG</h1>
+                    <div style={{ marginTop: 'var(--spacing-1)' }}>
+                      <span className="badge badge-success">
+                        v4.1 • Professional
+                      </span>
+                    </div>
                   </div>
                 </div>
+              
+                <div className="actions">
+                  <label className="chip">
+                    <input 
+                      type="checkbox" 
+                      id="dark-mode-toggle"
+                      name="darkMode"
+                      checked={settings?.theme === 'dark'}
+                      onChange={() => settingsService.toggleDarkMode()}
+                      style={{ display: 'none' }}
+                    />
+                    <span style={{ fontSize: 'var(--font-size-lg)' }}>🌙</span>
+                    <span>Dark</span>
+                  </label>
+                  
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    onClick={() => setShowUserProfile(true)}
+                    title="View Profile"
+                  >
+                    <span style={{ marginRight: 'var(--spacing-1)' }}>{userLevel.icon}</span>
+                    Level {userLevel.level}
+                  </button>
+                  
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowTemplateManager(true)}>
+                    <span style={{ marginRight: 'var(--spacing-1)' }}>🎨</span>
+                    Templates
+                  </button>
+                  
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowPWASettings(true)}>
+                    <span style={{ marginRight: 'var(--spacing-1)' }}>⚡</span>
+                    PWA
+                  </button>
+
+                  <button className="btn btn-secondary btn-sm" onClick={handleLogout} title="Sign Out">
+                    <span style={{ marginRight: 'var(--spacing-1)' }}>🚪</span>
+                    Logout
+                  </button>
+                </div>
               </div>
-            
-            <div className="actions flex items-center gap-3">
-              <label className="chip flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                <input 
-                  type="checkbox" 
-                  id="dark-mode-toggle"
-                  name="darkMode"
-                  checked={settings?.theme === 'dark'}
-                  onChange={() => settingsService.toggleDarkMode()}
-                  className="hidden"
-                />
-                <span className="text-lg">🌙</span>
-                <span className="text-sm font-medium">Dark</span>
-              </label>
-              
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={() => setShowUserProfile(true)}
-                title="View Profile"
-              >
-                <span className="text-base mr-1">{userLevel.icon}</span>
-                Level {userLevel.level}
-              </button>
-              
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowTemplateManager(true)}>
-                <span className="text-base mr-1">🎨</span>
-                Templates
-              </button>
-              
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowPWASettings(true)}>
-                <span className="text-base mr-1">⚡</span>
-                PWA
-              </button>
-
-              <button className="btn btn-secondary btn-sm" onClick={handleLogout} title="Sign Out">
-                <span className="text-base mr-1">🚪</span>
-                Logout
-              </button>
             </div>
 
-            </div>
-
-            <nav className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl shadow-inner">
+            <nav className="nav-container">
               <button 
-                className={`tab px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  currentView === 'dashboard' 
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50'
-                }`}
+                className={`tab ${currentView === 'dashboard' ? 'tab-active' : ''}`}
                 data-view="dashboard"
                 aria-current={currentView === 'dashboard' ? 'page' : 'false'}
                 onClick={() => setCurrentView('dashboard')}
               >
-                <span className="text-base">🏠</span>
+                <span>🏠</span>
                 Dashboard
               </button>
               <button 
-                className={`tab px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  currentView === 'goals' 
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50'
-                }`}
+                className={`tab ${currentView === 'goals' ? 'tab-active' : ''}`}
                 data-view="goals"
                 aria-current={currentView === 'goals' ? 'page' : 'false'}
                 onClick={() => setCurrentView('goals')}
               >
-                <span className="text-base">🎯</span>
+                <span>🎯</span>
                 Goals
               </button>
               <button 
-                className={`tab px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  currentView === 'resources' 
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50'
-                }`}
+                className={`tab ${currentView === 'resources' ? 'tab-active' : ''}`}
                 data-view="resources"
                 aria-current={currentView === 'resources' ? 'page' : 'false'}
                 onClick={() => setCurrentView('resources')}
               >
-                <span className="text-base">🔗</span>
+                <span>🔗</span>
                 Resources
               </button>
               <button 
-                className={`tab px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  currentView === 'stats' 
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50'
-                }`}
+                className={`tab ${currentView === 'stats' ? 'tab-active' : ''}`}
                 data-view="stats"
                 aria-current={currentView === 'stats' ? 'page' : 'false'}
                 onClick={() => setCurrentView('stats')}
               >
-                <span className="text-base">📊</span>
+                <span>📊</span>
                 Stats
               </button>
               <button 
-                className={`tab px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  currentView === 'settings' 
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50'
-                }`}
+                className={`tab ${currentView === 'settings' ? 'tab-active' : ''}`}
                 data-view="settings"
                 aria-current={currentView === 'settings' ? 'page' : 'false'}
                 onClick={() => setCurrentView('settings')}
               >
-                <span className="text-base">⚙️</span>
+                <span>⚙️</span>
                 Settings
               </button>
             </nav>
