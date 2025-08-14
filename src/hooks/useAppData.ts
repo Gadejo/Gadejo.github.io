@@ -1,21 +1,51 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppData, SubjectData, Session, Goal, SubjectConfig } from '../types';
 import { loadAppData, saveAppData } from '../utils/storage';
-import { databaseService } from '../services/database';
+import { databaseService } from '../services/dataService';
 import { authService } from '../services/auth';
 
 export function useAppData() {
   const [data, setData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initial data loading
+  // Initial data loading with improved error handling
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const appData = await loadAppData();
-        setData(appData);
+        console.log('Loading initial data...');
+        
+        // Try to load from database first if authenticated
+        if (authService.getCurrentUser()) {
+          console.log('User authenticated, trying to load from database...');
+          try {
+            const dbData = await databaseService.loadAppData();
+            if (dbData) {
+              console.log('Successfully loaded data from database');
+              setData(dbData);
+              setIsLoading(false);
+              return;
+            }
+          } catch (error) {
+            console.log('Database load failed, falling back to localStorage:', error);
+          }
+        }
+        
+        // Fallback to localStorage
+        console.log('Loading from localStorage...');
+        const localData = await loadAppData();
+        setData(localData);
+        
       } catch (error) {
         console.error('Failed to load initial data:', error);
+        // Set default data if all else fails
+        setData({
+          subjects: {},
+          sessions: [],
+          goals: [],
+          pips: {},
+          preferences: { dark: false },
+          version: '4.1.0'
+        });
       } finally {
         setIsLoading(false);
       }
@@ -26,10 +56,27 @@ export function useAppData() {
 
   const saveData = useCallback(async (newData: AppData) => {
     setData(newData);
+    
+    // Save to localStorage as backup/primary store
     try {
       await saveAppData(newData);
+      console.log('Data saved to localStorage');
     } catch (error) {
-      console.error('Failed to save data:', error);
+      console.error('Failed to save data to localStorage:', error);
+    }
+    
+    // Also try to save to database if authenticated
+    if (authService.getCurrentUser()) {
+      try {
+        const success = await databaseService.saveAppData(newData);
+        if (success) {
+          console.log('Data successfully synced to database');
+        } else {
+          console.log('Database save failed, data remains in localStorage');
+        }
+      } catch (error) {
+        console.error('Failed to save data to database:', error);
+      }
     }
   }, []);
 
@@ -49,19 +96,21 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to update directly in database
     if (authService.getCurrentUser()) {
       try {
         await databaseService.updateSubject(subjectId, updates);
       } catch (error) {
         console.error('Failed to update subject in database:', error);
+        // Data is still saved locally, so this isn't critical
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
   }, [data]);
 
@@ -87,8 +136,8 @@ export function useAppData() {
     };
     
     setData(newData);
-    saveAppData(newData);
-  }, [data]);
+    saveData(newData);
+  }, [data, saveData]);
 
   const removeSubject = useCallback((subjectId: string) => {
     if (!data) return;
@@ -102,8 +151,8 @@ export function useAppData() {
     };
     
     setData(newData);
-    saveAppData(newData);
-  }, [data]);
+    saveData(newData);
+  }, [data, saveData]);
 
   const addSession = useCallback(async (session: Omit<Session, 'id'>) => {
     if (!data) return null;
@@ -167,6 +216,13 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to add session to database
     if (authService.getCurrentUser()) {
       try {
@@ -180,14 +236,8 @@ export function useAppData() {
           achievementLevel: updatedSubject.achievementLevel
         });
       } catch (error) {
-        console.error('Failed to save session to database:', error);
+        console.error('Failed to save session to database (data still saved locally):', error);
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
     
     return newSession;
@@ -208,19 +258,20 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to add goal to database
     if (authService.getCurrentUser()) {
       try {
         await databaseService.addGoal(goal);
       } catch (error) {
-        console.error('Failed to save goal to database:', error);
+        console.error('Failed to save goal to database (data still saved locally):', error);
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
   }, [data]);
 
@@ -236,19 +287,20 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to update goal in database
     if (authService.getCurrentUser()) {
       try {
         await databaseService.updateGoal(goalId, updates);
       } catch (error) {
-        console.error('Failed to update goal in database:', error);
+        console.error('Failed to update goal in database (data still saved locally):', error);
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
   }, [data]);
 
@@ -262,19 +314,20 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to delete goal from database
     if (authService.getCurrentUser()) {
       try {
         await databaseService.deleteGoal(goalId);
       } catch (error) {
-        console.error('Failed to delete goal from database:', error);
+        console.error('Failed to delete goal from database (data still saved locally):', error);
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
   }, [data]);
 
@@ -294,19 +347,20 @@ export function useAppData() {
     
     setData(newData);
     
+    // Save locally first
+    try {
+      await saveAppData(newData);
+    } catch (error) {
+      console.error('Failed to save data locally:', error);
+    }
+    
     // If authenticated, try to update pip count in database
     if (authService.getCurrentUser()) {
       try {
         await databaseService.setPipCount(subjectId, date, count);
       } catch (error) {
-        console.error('Failed to update pip count in database:', error);
+        console.error('Failed to update pip count in database (data still saved locally):', error);
       }
-    }
-    
-    try {
-      await saveAppData(newData);
-    } catch (error) {
-      console.error('Failed to save data:', error);
     }
   }, [data]);
 
@@ -330,10 +384,14 @@ export function useAppData() {
     }
   }, [data]);
 
-  // Auto-save when data changes
+  // Auto-save when data changes (debounced)
   useEffect(() => {
     if (data) {
-      saveAppData(data);
+      const timeoutId = setTimeout(() => {
+        saveAppData(data);
+      }, 500); // Debounce saves by 500ms
+
+      return () => clearTimeout(timeoutId);
     }
   }, [data]);
 
