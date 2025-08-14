@@ -1,6 +1,6 @@
 import type { AppData, SubjectData, SubjectConfig, Template } from '../types';
 import { defaultSubjects } from './defaults';
-import { databaseService } from '../services/database';
+import { databaseService } from '../services/dataService';
 import { authService } from '../services/auth';
 
 const STORAGE_KEY = 'modular-learning-rpg';
@@ -40,7 +40,12 @@ export async function loadAppData(): Promise<AppData> {
   // If user is authenticated, try to load from D1 database
   if (authService.getCurrentUser()) {
     try {
-      return await databaseService.loadAppData();
+      const data = await databaseService.loadAppData();
+      if (data) {
+        return data;
+      }
+      // If data is null, fall back to localStorage
+      return loadAppDataFromLocalStorage();
     } catch (error) {
       console.error('Failed to load from database, falling back to localStorage:', error);
       // Fall back to localStorage

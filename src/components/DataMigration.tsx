@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { hasLocalStorageData, markMigrationCompleted, skipMigration } from '../utils/storage';
-import { databaseService } from '../services/database';
+import { databaseService } from '../services/dataService';
 
 interface DataMigrationProps {
   onMigrationComplete: () => void;
