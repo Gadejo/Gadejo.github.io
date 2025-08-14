@@ -24,7 +24,7 @@ export function Card({
   const baseClass = 'card';
   const hoverClass = hover || onClick ? 'card-hover' : '';
   const loadingClass = loading ? 'opacity-75' : '';
-  const errorClass = error ? 'border-red-300 bg-red-50' : '';
+  const errorClass = error ? 'border-error-300 bg-error-50' : '';
   
   const classes = [baseClass, hoverClass, loadingClass, errorClass, className]
     .filter(Boolean)
@@ -45,8 +45,8 @@ export function Card({
       <div className={classes}>
         <div className="card-body">
           <div className="text-center py-4">
-            <div className="text-red-500 text-2xl mb-2">⚠️</div>
-            <p className="text-red-600 text-sm">
+            <div className="text-error text-2xl mb-2">⚠️</div>
+            <p className="text-error text-sm">
               {error.message || 'Something went wrong'}
             </p>
           </div>
@@ -118,7 +118,7 @@ export function CardTitle({
   className?: string; 
 }) {
   return (
-    <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
+    <h3 className={`text-lg font-semibold ${className}`} style={{ color: 'var(--color-text)' }}>
       {children}
     </h3>
   );
@@ -133,7 +133,7 @@ export function CardSubtitle({
   className?: string; 
 }) {
   return (
-    <p className={`text-sm text-gray-600 ${className}`}>
+    <p className={`text-sm ${className}`} style={{ color: 'var(--color-text-secondary)' }}>
       {children}
     </p>
   );

@@ -20,7 +20,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClass = 'btn';
-  const variantClass = `btn-${variant}`;
+  const variantClass = variant === 'danger' ? 'btn-error' : `btn-${variant}`;
   const sizeClass = size !== 'md' ? `btn-${size}` : '';
   
   const classes = [baseClass, variantClass, sizeClass, className]
