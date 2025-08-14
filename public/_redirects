@@ -1,7 +1,0 @@
-# Cloudflare Pages redirects for SPA
-
-# API routes should go to functions
-/api/* /api/:splat 200
-
-# All other routes should serve the main index.html for SPA routing
-/* /index.html 200

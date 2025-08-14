@@ -3,7 +3,6 @@ import { AppState, Subject, Session } from '../types';
 import StudyTimer from './StudyTimer';
 import SubjectManager from './SubjectManager';
 import ProgressStats from './ProgressStats';
-import StudySuggestions from './StudySuggestions';
 
 interface DashboardProps {
   state: AppState;
@@ -155,18 +154,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, setState, onLogout }) => {
 
       <main style={{ padding: '0 20px 20px' }}>
         {activeView === 'overview' && (
-          <>
-            <StudySuggestions 
-              user={user!} 
-              subjects={subjects} 
-              sessions={sessions} 
-            />
-            <ProgressStats 
+          <ProgressStats 
             user={user!} 
             subjects={subjects} 
             sessions={sessions} 
           />
-          </>
         )}
         
         {activeView === 'study' && (

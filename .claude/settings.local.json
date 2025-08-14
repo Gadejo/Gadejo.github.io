@@ -20,7 +20,9 @@
       "WebFetch(domain:07961d9c.gadejo-github-io.pages.dev)",
       "WebFetch(domain:localhost)",
       "Bash(npx tsc:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

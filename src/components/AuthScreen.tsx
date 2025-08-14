@@ -1,390 +1,196 @@
-import React, { useState, useEffect } from 'react';
-import { authService } from '../services/auth';
-import type { LoginCredentials, RegisterData, PublicUser } from '../types/auth';
+import React, { useState } from 'react';
+import { User } from '../types';
 
 interface AuthScreenProps {
-  onLogin: (showMigrationOrUserId: boolean | string) => void;
+  onLogin: (user: User) => void;
 }
 
-type AuthMode = 'select' | 'login' | 'register';
-
-export default function AuthScreen({ onLogin }: AuthScreenProps) {
-  const [mode, setMode] = useState<AuthMode>('select');
-  const [availableUsers, setAvailableUsers] = useState<PublicUser[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Form states
-  const [loginData, setLoginData] = useState<LoginCredentials>({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState<RegisterData>({ 
-    email: '', 
-    password: '', 
-    displayName: '' 
+const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: ''
   });
 
-  useEffect(() => {
-    // Load users immediately but don't block the UI
-    loadAvailableUsers();
-  }, []);
-
-  const loadAvailableUsers = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
     try {
-      setIsLoadingUsers(true);
-      const users = await authService.getAvailableUsers();
-      setAvailableUsers(users);
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
       
-      // Don't automatically switch to register mode if users exist
-      // Let user choose between existing users or create new
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      // If rate limited or API error, just set empty users
-      setAvailableUsers([]);
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginData.email || !loginData.password) {
-      setError('Email and password are required');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await authService.login(loginData);
-      const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
-      onLogin(shouldShowMigration);
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!registerData.email || !registerData.password || !registerData.displayName) {
-      setError('All fields are required');
-      return;
-    }
-
-    if (registerData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await authService.register(registerData);
-      const shouldShowMigration = localStorage.getItem('modular-learning-rpg') !== null;
-      onLogin(shouldShowMigration);
-    } catch (err: any) {
-      console.error('Registration failed:', err);
-      if (err.message && (err.message.includes('Rate limit') || err.message.includes('429'))) {
-        setError('Service is busy. Please try Guest Mode instead.');
+      if (response.ok) {
+        const { user, token } = await response.json();
+        localStorage.setItem('auth_token', token);
+        onLogin(user);
       } else {
-        setError(err.message || 'Registration failed');
+        const error = await response.text();
+        alert(error || 'Authentication failed');
       }
+    } catch (error) {
+      alert('Network error. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleUserSelect = async (user: PublicUser) => {
-    setLoginData({ email: user.email, password: '' });
-    setMode('login');
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  if (mode === 'select') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">🧠</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              ADHD Learning RPG
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Transform your learning into an adventure
-            </p>
-          </div>
-
-          {/* Available Users */}
-          {availableUsers.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-700 mb-4 text-center">Choose Your Character</h2>
-              <div className="space-y-3 max-h-48 overflow-y-auto">
-                {availableUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleUserSelect(user)}
-                    className="w-full flex items-center p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 rounded-xl transition-all duration-200 group"
-                  >
-                    <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 group-hover:scale-110 transition-transform duration-200">
-                      {user.displayName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-medium text-gray-900">{user.displayName}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
-                      <div className="flex items-center space-x-3 mt-1">
-                        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                          🔥 {user.currentStreak} streak
-                        </span>
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                          Level 1
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            {/* Guest mode button - always show first */}
-            <button
-              onClick={() => onLogin('guest-mode')}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              🎮 Continue as Guest (Recommended)
-            </button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setMode('register')}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              ✨ Create New Account
-            </button>
-            
-            {!isLoadingUsers && availableUsers.length > 0 && (
-              <button
-                onClick={() => setMode('login')}
-                className="w-full bg-white text-gray-700 py-3 px-6 rounded-xl font-medium border border-gray-300 hover:bg-gray-50 transform hover:scale-105 transition-all duration-200"
-              >
-                🔐 Login with Existing Account
-              </button>
-            )}
-            
-            {isLoadingUsers && (
-              <div className="w-full py-3 px-6 text-center text-gray-500 text-sm">
-                Looking for existing accounts...
-              </div>
-            )}
-          </div>
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '20px',
+        padding: '40px',
+        width: '100%',
+        maxWidth: '400px',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <h1 style={{ 
+            fontSize: '2.5rem', 
+            marginBottom: '10px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            🎮 Study RPG
+          </h1>
+          <p style={{ color: '#666', fontSize: '1.1rem' }}>
+            Level up your learning journey!
+          </p>
         </div>
-      </div>
-    );
-  }
 
-  if (mode === 'login') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">🔐</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Welcome Back!
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Enter your credentials to continue your journey
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                id="login-email"
-                name="email"
-                value={loginData.email}
-                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Enter your email"
-                disabled={isLoading}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                id="login-password"
-                name="password"
-                value={loginData.password}
-                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Enter your password"
-                disabled={isLoading}
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-800 text-sm text-center">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Logging in...</span>
-                </div>
-              ) : (
-                '🚀 Launch Adventure'
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMode('select')}
-              className="w-full text-gray-600 py-2 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200"
-            >
-              ← Back to Character Select
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === 'register') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">✨</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Create Your Character
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Start your personalized learning adventure
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleRegister} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Character Name</label>
+        <form onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div style={{ marginBottom: '20px' }}>
               <input
                 type="text"
-                id="register-displayName"
-                name="displayName"
-                value={registerData.displayName}
-                onChange={(e) => setRegisterData({ ...registerData, displayName: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Choose your character name"
-                disabled={isLoading}
-                required
+                name="username"
+                placeholder="Username"
+                value={formData.username}
+                onChange={handleChange}
+                required={!isLogin}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  border: '2px solid #e1e5e9',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'border-color 0.3s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                id="register-email"
-                name="email"
-                value={registerData.email}
-                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Enter your email"
-                disabled={isLoading}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                id="register-password"
-                name="password"
-                value={registerData.password}
-                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Create a strong password (6+ chars)"
-                disabled={isLoading}
-                minLength={6}
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-800 text-sm text-center">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Creating character...</span>
-                </div>
-              ) : (
-                '🎮 Begin Adventure'
-              )}
-            </button>
-
-            {availableUsers.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setMode('select')}
-                className="w-full text-gray-600 py-2 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200"
-              >
-                ← Back to Character Select
-              </button>
-            )}
-          </form>
+          )}
+          
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '15px',
+                border: '2px solid #e1e5e9',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                outline: 'none',
+                transition: 'border-color 0.3s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+            />
+          </div>
+          
+          <div style={{ marginBottom: '30px' }}>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '15px',
+                border: '2px solid #e1e5e9',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                outline: 'none',
+                transition: 'border-color 0.3s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '15px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              transition: 'transform 0.2s',
+              marginBottom: '20px'
+            }}
+            onMouseDown={(e) => !loading && (e.currentTarget.style.transform = 'scale(0.98)')}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {loading ? '⏳ Please wait...' : (isLogin ? '🚀 Start Adventure' : '✨ Create Account')}
+          </button>
+        </form>
+        
+        <div style={{ textAlign: 'center' }}>
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+          </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+};
 
-  return null;
-}
+export default AuthScreen;

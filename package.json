@@ -1,74 +1,26 @@
 {
-  "name": "adhd-learning-rpg",
-  "version": "4.1.0",
-  "description": "Gamified learning management system designed for ADHD learners - Production Ready",
-  "main": "index.js",
+  "name": "adhd-study-rpg",
+  "version": "1.0.0",
+  "description": "Simple gamified study app with XP and progress tracking",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:cf": "node build-for-cloudflare.js",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "devtools": "react-devtools",
-    "cf:dev": "wrangler pages dev --d1 DB=adhd-learning-rpg --kv SESSIONS=adhd-learning-sessions --kv CACHE=adhd-learning-cache --kv RATE_LIMIT=adhd-learning-ratelimit dist",
-    "cf:deploy": "npm run build && wrangler pages deploy dist",
-    "cf:deploy:preview": "npm run build && wrangler pages deploy dist --env=preview",
-    "db:schema": "wrangler d1 execute adhd-learning-rpg --file=./database/schema.sql",
-    "db:schema:enhanced": "wrangler d1 execute adhd-learning-rpg --file=./database/schema-enhanced.sql",
-    "db:seed": "wrangler d1 execute adhd-learning-rpg --file=./database/seed-data.sql",
-    "db:seed:enhanced": "wrangler d1 execute adhd-learning-rpg --file=./database/seed-data-enhanced.sql",
-    "db:reset": "npm run db:schema:enhanced && npm run db:seed:enhanced",
-    "db:schema:preview": "wrangler d1 execute adhd-learning-rpg-preview --file=./database/schema-enhanced.sql",
-    "db:seed:preview": "wrangler d1 execute adhd-learning-rpg-preview --file=./database/seed-data-enhanced.sql",
-    "db:reset:preview": "npm run db:schema:preview && npm run db:seed:preview",
-    "db:migrate": "wrangler d1 migrations apply adhd-learning-rpg",
-    "db:migrate:preview": "wrangler d1 migrations apply adhd-learning-rpg-preview",
-    "db:backup": "wrangler d1 export adhd-learning-rpg --output=./backups/backup-$(date +%Y%m%d).sql",
-    "db:migrate:settings": "wrangler d1 execute adhd-learning-rpg --file=./database/migration-add-user-settings.sql",
-    "db:check": "wrangler d1 execute adhd-learning-rpg --command=\"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
-    "migrate:help": "node migrate-database.js",
-    "kv:list": "wrangler kv:namespace list",
-    "kv:keys:sessions": "wrangler kv:key list --namespace-id=27468ac52229485495c8ab85119482ff",
-    "kv:keys:cache": "wrangler kv:key list --namespace-id=477349b4795e40969d15253cc42f2461",
-    "kv:keys:ratelimit": "wrangler kv:key list --namespace-id=5417e5e76c5a4a969d07deca94ba716b",
-    "kv:clear:sessions": "wrangler kv:key delete --namespace-id=27468ac52229485495c8ab85119482ff",
-    "analytics": "wrangler pages deployment list",
-    "logs": "wrangler pages deployment tail",
-    "status": "wrangler pages project list"
+    "cf:dev": "wrangler pages dev dist --compatibility-date=2024-01-01 --d1=main-db",
+    "cf:deploy": "npm run build && wrangler pages deploy dist"
   },
-  "keywords": [
-    "ADHD",
-    "learning",
-    "education",
-    "gamification",
-    "productivity",
-    "study-tracker",
-    "cloudflare",
-    "react",
-    "typescript",
-    "d1-database",
-    "kv-storage",
-    "production-ready"
-  ],
-  "author": "ADHD Learning RPG Team",
-  "license": "MIT",
   "dependencies": {
-    "@types/react": "^19.1.9",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^5.0.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.1"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1"
   },
   "devDependencies": {
-    "@types/react-devtools": "^3.6.2",
-    "react-devtools": "^1.0.5",
-    "wrangler": "^4.28.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5",
+    "wrangler": "^3.0.0"
   }
 }
